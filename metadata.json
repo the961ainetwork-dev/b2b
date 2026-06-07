@@ -1,0 +1,6 @@
+{
+  "name": "Point to Business Services",
+  "description": "High-accuracy B2B email lists, lead generation services, and database counts with an interactive target estimator.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
