@@ -26,7 +26,7 @@ export interface TourStep {
 
 interface GuidedTourProps {
   onClose: () => void;
-  onSelectPage: (page: 'home' | 'srv-1' | 'srv-2' | 'srv-3' | 'srv-4' | 'get-started' | 'admin') => void;
+  onSelectPage: (page: 'home' | 'srv-1' | 'srv-2' | 'srv-3' | 'srv-4' | 'get-started' | 'admin' | 'agent-miner') => void;
   onFinishSetup?: (industry: string, quantity: string) => void;
 }
 
@@ -103,8 +103,12 @@ export default function GuidedTour({ onClose, onSelectPage, onFinishSetup }: Gui
 
   // Logic to track active element bounding rect
   useEffect(() => {
-    // Reset to homepage to ensure all sections exist in the DOM
-    onSelectPage('home');
+    // Reset to homepage/agent-miner page to ensure all sections exist in the DOM
+    if (activeStepItem.targetId === 'ai-agents-section') {
+      onSelectPage('agent-miner');
+    } else {
+      onSelectPage('home');
+    }
 
     const updateHighlight = () => {
       if (!activeStepItem.targetId) {

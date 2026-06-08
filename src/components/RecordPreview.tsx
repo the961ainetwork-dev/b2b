@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Lock, 
@@ -16,8 +16,10 @@ import {
   X,
   Sparkles,
   Copy,
-  Check
+  Check,
+  FileText
 } from 'lucide-react';
+import { jsPDF } from 'jspdf';
 import { MOCK_CONTACTS } from '../data';
 import { ContactRecord } from '../types';
 
@@ -27,14 +29,267 @@ export default function RecordPreview({ onTriggerSample }: { onTriggerSample: ()
   const [selectedIndustry, setSelectedIndustry] = useState('All');
   const [isSampleModalOpen, setIsSampleModalOpen] = useState(false);
   const [copiedEmail, setCopiedEmail] = useState<string | null>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'info'; visible: boolean } | null>(null);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => {
+      setToast(null);
+    }, 4500);
+    return () => clearTimeout(timer);
+  }, [toast]);
+
+  const showToast = (message: string, type: 'success' | 'info' = 'success') => {
+    setToast({ message, type, visible: true });
+  };
+
+  const handleCopySelectedEmails = () => {
+    try {
+      const selectedContacts = MOCK_CONTACTS.filter(c => selectedIds.includes(c.id));
+      const emails = selectedContacts.map(c => c.email).join(', ');
+      navigator.clipboard.writeText(emails);
+      showToast(`Successfully copied matches! ${selectedIds.length} B2B digital emails transferred to clipboard. (${selectedIds.length} rows processed)`, 'success');
+    } catch (err) {
+      console.warn('Clipboard writing error:', err);
+      showToast('Error transferring emails to clipboard.', 'info');
+    }
+  };
+
+  const handleDownloadSelectedCSV = () => {
+    try {
+      const selectedContacts = MOCK_CONTACTS.filter(c => selectedIds.includes(c.id));
+      const headers = ['First Name', 'Last Name', 'Title', 'Email', 'Phone', 'Company', 'Industry', 'Revenue', 'Country', 'Status'];
+      const csvRows = [
+        headers.join(','),
+        ...selectedContacts.map(c => [
+          `"${c.firstName}"`,
+          `"${c.lastName}"`,
+          `"${c.title}"`,
+          `"${c.email}"`,
+          `"${c.phone}"`,
+          `"${c.company}"`,
+          `"${c.industry}"`,
+          `"${c.revenue}"`,
+          `"${c.country}"`,
+          `"${c.verifiedStatus}"`
+        ].join(','))
+      ];
+      
+      const csvContent = "data:text/csv;charset=utf-8," + csvRows.join("\n");
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `Zrolodex_Selected_Leads_${selectedIds.length}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      showToast(`Exported successfully! Zrolodex_Selected_Leads_${selectedIds.length}.csv file download initialized. (${selectedIds.length} rows processed)`, 'success');
+    } catch (err) {
+      console.warn('CSV export error:', err);
+      showToast('Failed to export selected leads.', 'info');
+    }
+  };
+
+  const toggleSelectRow = (id: string) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAll = (contactsList: ContactRecord[]) => {
+    const activeContactIds = contactsList.map(c => c.id);
+    const allSelectedOnPage = activeContactIds.length > 0 && activeContactIds.every(id => selectedIds.includes(id));
+    
+    if (allSelectedOnPage) {
+      // Unselect all of these active filtered contacts
+      setSelectedIds(prev => prev.filter(id => !activeContactIds.includes(id)));
+    } else {
+      // Select all of these active filtered contacts
+      setSelectedIds(prev => {
+        const unionSet = new Set([...prev, ...activeContactIds]);
+        return Array.from(unionSet);
+      });
+    }
+  };
+
+  const handleDownloadPDF = () => {
+    setIsGeneratingPdf(true);
+    try {
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      // Colors
+      const primaryColor = '#0f172a'; // Deep slate (slate-900)
+      const accentColor = '#b45309'; // Amber-700
+      const successColor = '#047857'; // Emerald-700
+      const textColor = '#334155'; // Slate-700 text color
+
+      // Headings
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(22);
+      doc.setTextColor(primaryColor);
+      doc.text('Zrolodex B2B Database Record', 20, 22);
+
+      // Gold line separator
+      doc.setDrawColor(217, 119, 6); // amber-600
+      doc.setLineWidth(1);
+      doc.line(20, 26, 190, 26);
+
+      // Label metadata
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(textColor);
+      doc.text('STANDARD METADATA: TRIPLE-VERIFIED OUTBOUND DIRECT EXPANSION LIST', 20, 32);
+      doc.text('GENERATED: ' + new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }), 190, 32, { align: 'right' });
+
+      // Highlight description
+      doc.setFontSize(10.5);
+      doc.setTextColor(textColor);
+      doc.text('This record snippet previews the precision quality formatting of direct prospect rosters on orders.', 20, 40);
+      doc.text('Every custom lead delivered is passed through our rigid validation sequence before release.', 20, 45);
+
+      // Table Header Row Title
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.setTextColor(primaryColor);
+      doc.text('SAMPLED OUTBOUND LEADS (5 REPORTED ROWS)', 20, 56);
+
+      // Draw Table Header Background
+      doc.setFillColor(241, 245, 249); // slate-100
+      doc.rect(20, 61, 170, 8, 'F');
+
+      doc.setFontSize(9);
+      doc.setTextColor(primaryColor);
+      doc.text('Contact Name / Role', 23, 66.5);
+      doc.text('Corporate Email Code', 70, 66.5);
+      doc.text('Target Organism Profile', 115, 66.5);
+      doc.text('Validation Audit', 162, 66.5);
+
+      const rows = [
+        { name: 'Sarah Jenkins', role: 'VP of Growth', email: 'sarah.jenkins@stripe.com', company: 'Stripe, Inc.', domain: 'stripe.com', status: 'Triple Verified' },
+        { name: 'Marcus Chen', role: 'Director of Demand Gen', email: 'marcus.chen@airbnb.com', company: 'Airbnb', domain: 'airbnb.com', status: 'Triple Verified' },
+        { name: 'Elena Rostova', role: 'Head of Outbound Strategy', email: 'elena.rostova@datadoghq.com', company: 'Datadog EMEA', domain: 'datadoghq.com', status: 'Triple Verified' },
+        { name: 'David Kofman', role: 'Senior Growth Lead', email: 'd.kofman@canva.com', company: 'Canva HQ', domain: 'canva.com', status: 'Triple Verified' },
+        { name: 'Amina Diallo', role: 'VP Corporate Strategy', email: 'amina.diallo@retrieval.io', company: 'Retrieval AI', domain: 'retrieval.io', status: 'Triple Verified' }
+      ];
+
+      let currentY = 69;
+      rows.forEach((row, idx) => {
+        // Draw row divider line
+        doc.setDrawColor(241, 245, 249);
+        doc.setLineWidth(0.3);
+        doc.line(20, currentY + 12, 190, currentY + 12);
+
+        // Contact Info
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9.5);
+        doc.setTextColor(primaryColor);
+        doc.text(row.name, 23, currentY + 4.5);
+        
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(textColor);
+        doc.text(row.role, 23, currentY + 8.5);
+
+        // Corporate Email Info
+        doc.setFont('courier', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(primaryColor);
+        doc.text(row.email, 70, currentY + 6.5);
+
+        // Organization Info
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9.5);
+        doc.setTextColor(textColor);
+        doc.text(row.company, 115, currentY + 4.5);
+        
+        doc.setFont('courier', 'normal');
+        doc.setFontSize(7.5);
+        doc.text(row.domain, 115, currentY + 8.5);
+
+        // Verification Status Stamp
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.setTextColor(successColor);
+        doc.text(row.status, 162, currentY + 6.5);
+
+        currentY += 12;
+      });
+
+      // Verification Overview
+      currentY += 10;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.setTextColor(primaryColor);
+      doc.text('3-LEVEL INTEGRITY EVALUATION PROTOCOL SUMMARY:', 20, currentY);
+
+      currentY += 5;
+      // Step 1
+      doc.setFontSize(9.5);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(accentColor);
+      doc.text('1. SMTP Handshake Validation Loop', 22, currentY + 2);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.5);
+      doc.setTextColor(textColor);
+      doc.text('Establishes live connections with third-party email nodes to guarantee active mailboxes.', 22, currentY + 6);
+
+      currentY += 11;
+      // Step 2
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(accentColor);
+      doc.text('2. LinkedIn Cross-Profile Correlation', 22, currentY + 2);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.5);
+      doc.setTextColor(textColor);
+      doc.text('Matches corporate titles with live directory trees in our secure background database indexer.', 22, currentY + 6);
+
+      currentY += 11;
+      // Step 3
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(accentColor);
+      doc.text('3. Catch-All Domain Signature Filtering', 22, currentY + 2);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.5);
+      doc.setTextColor(textColor);
+      doc.text('Removes catch-all configurations, honey-pots, corporate blocks and spam traps dynamically.', 22, currentY + 6);
+
+      // --- Footer ---
+      doc.setDrawColor(226, 232, 240);
+      doc.setLineWidth(0.4);
+      doc.line(20, 274, 190, 274);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7.5);
+      doc.setTextColor(textColor);
+      doc.text('* Preview complies strictly with corporate rules, international GDPR mandates & state CAN-SPAM direct indexing rules.', 20, 279);
+      doc.text('Zrolodex B2B Database & Custom Outbound Pipelines. To request dynamic high-yield orders, request a Custom Quote.', 20, 283);
+
+      doc.save('Zrolodex_Data_Sample_Report.pdf');
+      showToast('Zrolodex_Data_Sample_Report.pdf download started successfully! (5 sample rows processed)', 'success');
+    } catch (err) {
+      console.error('JS PDF structure generation occurred:', err);
+      showToast('Fallback warning: Failed to output PDF document.', 'info');
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
 
   const handleCopyEmail = (email: string) => {
     try {
       navigator.clipboard.writeText(email);
       setCopiedEmail(email);
       setTimeout(() => setCopiedEmail(null), 2000);
+      showToast(`Copied ${email} to clipboard! (1 record processed)`, 'success');
     } catch (err) {
       console.warn('Clipboard writing error:', err);
+      showToast('Failed to copy text to clipboard.', 'info');
     }
   };
 
@@ -124,9 +379,19 @@ export default function RecordPreview({ onTriggerSample }: { onTriggerSample: ()
 
       {/* Database Sheet Table */}
       <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
+        <table className="w-full text-left border-collapse" id="preview-data-table">
           <thead>
             <tr className="bg-slate-100/40 text-[11px] uppercase tracking-wider font-semibold text-slate-500 border-b border-slate-100 font-mono">
+              <th className="py-4 px-4 text-center w-12">
+                <input
+                  type="checkbox"
+                  checked={filteredContacts.length > 0 && filteredContacts.every(c => selectedIds.includes(c.id))}
+                  onChange={() => handleSelectAll(filteredContacts)}
+                  className="w-4 h-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500 cursor-pointer"
+                  title="Toggle all matching prospects"
+                  id="select-all-contacts-checkbox"
+                />
+              </th>
               <th className="py-4 px-6">Name / Title</th>
               <th className="py-4 px-4">Company Profile</th>
               <th className="py-4 px-4">Verified Business Email</th>
@@ -139,8 +404,26 @@ export default function RecordPreview({ onTriggerSample }: { onTriggerSample: ()
             {filteredContacts.length > 0 ? (
               filteredContacts.map((contact) => {
                 const isUnlocked = unlockedIds.includes(contact.id);
+                const isSelected = selectedIds.includes(contact.id);
                 return (
-                  <tr key={contact.id} className="hover:bg-slate-50/55 transition group">
+                  <tr 
+                    key={contact.id} 
+                    className={`transition group border-b border-slate-100/70 cursor-default ${
+                      isSelected 
+                        ? 'bg-amber-50/30 hover:bg-amber-50/50' 
+                        : 'hover:bg-slate-50/55'
+                    }`}
+                    id={`row-${contact.id}`}
+                  >
+                    <td className="py-4 px-4 text-center">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelectRow(contact.id)}
+                        className="w-4 h-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500 cursor-pointer"
+                        id={`select-contact-${contact.id}`}
+                      />
+                    </td>
                     
                     {/* Name / Title */}
                     <td className="py-4 px-6">
@@ -260,7 +543,7 @@ export default function RecordPreview({ onTriggerSample }: { onTriggerSample: ()
               })
             ) : (
               <tr>
-                <td colSpan={6} className="py-12 text-center text-slate-400 font-medium font-display">
+                <td colSpan={7} className="py-12 text-center text-slate-400 font-medium font-display">
                   No prospects matched your current search filters. Try selecting another industry.
                 </td>
               </tr>
@@ -268,6 +551,61 @@ export default function RecordPreview({ onTriggerSample }: { onTriggerSample: ()
           </tbody>
         </table>
       </div>
+
+      {/* Floating/Bottom Action Bar for selection status */}
+      <AnimatePresence>
+        {selectedIds.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="bg-slate-900 text-white border-t border-slate-800 px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-3 text-xs overflow-hidden"
+            id="selection-actions-bar"
+          >
+            <div className="flex items-center gap-2 font-display">
+              <span className="bg-amber-500 text-slate-950 font-mono text-xs px-2.5 py-0.5 rounded-full font-bold flex items-center justify-center min-w-[24px]">
+                {selectedIds.length}
+              </span>
+              <span className="text-slate-200">
+                {selectedIds.length === 1 ? 'Prospect record selected' : 'Prospect records selected'} for customized lead list order
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <button
+                onClick={handleCopySelectedEmails}
+                className="px-3 py-1.5 border border-slate-700 hover:bg-slate-800 text-slate-300 rounded-lg font-semibold transition cursor-pointer bg-slate-900 flex items-center gap-1.5"
+                id="copy-selected-emails-btn"
+              >
+                <Copy className="w-3.5 h-3.5 text-slate-400" />
+                Copy Emails
+              </button>
+              <button
+                onClick={handleDownloadSelectedCSV}
+                className="px-3 py-1.5 border border-slate-700 hover:bg-slate-800 text-slate-300 rounded-lg font-semibold transition cursor-pointer bg-slate-900 flex items-center gap-1.5"
+                id="export-selected-csv-btn"
+              >
+                <Download className="w-3.5 h-3.5 text-slate-400" />
+                Download CSV
+              </button>
+              <button
+                onClick={() => setSelectedIds([])}
+                className="px-3 py-1.5 border border-slate-750 hover:bg-slate-850 text-slate-400 hover:text-slate-200 rounded-lg font-semibold transition cursor-pointer bg-slate-900"
+                id="clear-selection-btn"
+              >
+                Clear Selection
+              </button>
+              <button
+                onClick={onTriggerSample}
+                className="px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-lg transition flex items-center gap-1.5 cursor-pointer shadow-lg shadow-amber-500/10"
+                id="extract-selected-contacts-btn"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                Unlock Selected
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Explorer Footer with statistics */}
       <div className="bg-slate-50 p-4 border-t border-slate-100 flex flex-col md:flex-row md:items-center md:justify-between text-xs gap-3">
@@ -435,10 +773,19 @@ export default function RecordPreview({ onTriggerSample }: { onTriggerSample: ()
                 <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
                   <button
                     onClick={() => setIsSampleModalOpen(false)}
-                    className="px-4 py-2 border border-slate-200 hover:bg-slate-100 text-slate-600 rounded-xl font-bold text-xs transition cursor-pointer"
+                    className="px-4 py-2 border border-slate-200 hover:bg-slate-100 text-slate-600 rounded-xl font-bold text-xs transition cursor-pointer bg-white"
                     id="sample-modal-cancel-btn"
                   >
                     Close Preview
+                  </button>
+                  <button
+                    onClick={handleDownloadPDF}
+                    disabled={isGeneratingPdf}
+                    className="px-4 py-2 border border-brand-200 hover:border-brand-300 text-brand-700 bg-brand-50 hover:bg-brand-100/70 rounded-xl font-bold text-xs transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    id="sample-modal-pdf-btn"
+                  >
+                    <FileText className="w-3.5 h-3.5 text-brand-600" />
+                    {isGeneratingPdf ? 'Generating PDF...' : 'Download PDF Report'}
                   </button>
                   <button
                     onClick={() => {

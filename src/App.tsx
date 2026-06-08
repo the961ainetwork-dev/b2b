@@ -93,7 +93,7 @@ const getInitialSiteTitle = (): string => {
 };
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState<'home' | 'srv-1' | 'srv-2' | 'srv-3' | 'srv-4' | 'get-started' | 'admin'>('home');
+  const [currentPage, setCurrentPage] = useState<'home' | 'srv-1' | 'srv-2' | 'srv-3' | 'srv-4' | 'get-started' | 'admin' | 'agent-miner'>('home');
   const [sectionsState, setSectionsState] = useState<AdminSectionConfig[]>(getInitialSections);
   const [storiesState, setStoriesState] = useState<TestimonialItem[]>(getInitialStories);
   const [siteTitleState, setSiteTitleState] = useState<string>(getInitialSiteTitle);
@@ -392,8 +392,13 @@ export default function App() {
           {/* Desktop Navigation Links */}
           <nav className="hidden md:flex items-center gap-6 text-sm font-semibold text-slate-600">
             <button 
-              onClick={() => navigateToAnchor('ai-agents-section')}
-              className="hover:text-brand-600 text-brand-600 font-bold flex items-center gap-1 transition cursor-pointer"
+              onClick={() => {
+                setCurrentPage('agent-miner');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className={`hover:text-brand-600 transition flex items-center gap-1 cursor-pointer font-semibold ${
+                currentPage === 'agent-miner' ? 'text-brand-600 font-bold' : 'text-slate-600'
+              }`}
             >
               <Sparkles className="w-3.5 h-3.5 animate-pulse text-amber-500" />
               AI Agent Miner
@@ -582,7 +587,16 @@ export default function App() {
               <div className="border-b border-slate-100 pb-2">
                 <span className="text-[10px] font-mono font-bold text-slate-400 block uppercase mb-1.5">Interactive Dashboard</span>
                 <div className="flex flex-col pl-2 gap-2 text-xs">
-                  <button onClick={() => navigateToAnchor('ai-agents-section')} className="text-left py-1 hover:text-brand-600 text-brand-600 font-bold flex items-center gap-1.5">
+                  <button 
+                    onClick={() => {
+                      setCurrentPage('agent-miner');
+                      setMobileMenuOpen(false);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className={`text-left py-1 hover:text-brand-600 flex items-center gap-1.5 ${
+                      currentPage === 'agent-miner' ? 'text-brand-600 font-bold' : 'text-slate-600'
+                    }`}
+                  >
                     <Sparkles className="w-4 h-4 text-amber-500 animate-pulse" />
                     AI Agent Miner
                   </button>
@@ -821,30 +835,7 @@ export default function App() {
       </section>
       )}
 
-      {/* AI Agent Automated Lead Assembly Section */}
-      {getSectionConfig('ai-agents-section').isVisible && (
-      <section className="py-16 md:py-24 bg-gradient-to-b from-slate-100/30 to-white relative border-b border-slate-100" id="ai-agents-section">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          
-          <div className="text-center max-w-3xl mx-auto mb-10 md:mb-16 space-y-3">
-            <span className="bg-amber-100/60 text-amber-800 text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full border border-amber-200 inline-flex items-center gap-1 shadow-sm">
-              <Sparkles className="w-3 h-3 text-amber-500 animate-pulse" />
-              Automated AI Sourcing Agents
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-display font-bold text-slate-900 tracking-tight">
-              {getSectionConfig('ai-agents-section').title}
-            </h2>
-            <p className="text-slate-500 text-xs sm:text-sm md:text-base">
-              {getSectionConfig('ai-agents-section').subtitle}
-            </p>
-          </div>
-
-          {/* Core AIAgentBuilder block */}
-          <AIAgentBuilder />
-
-        </div>
-      </section>
-      )}
+      {/* AI Agent Automated Lead Assembly Section moved to dedicated AI Agent Miner page */}
 
       {/* Main Interactive Segment: EstimatorWidget */}
       {getSectionConfig('calculator-section').isVisible && (
@@ -974,28 +965,7 @@ export default function App() {
       </section>
       )}
 
-      {/* Global B2B Reach & Heatmap Visualizer */}
-      {getSectionConfig('database-footprint').isVisible && (
-      <section className="py-16 md:py-24 bg-slate-50 border-t border-b border-slate-100" id="database-footprint">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          
-          <div className="text-center max-w-3xl mx-auto mb-10 md:mb-16 space-y-3">
-            <span className="bg-brand-50 text-brand-700 text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full border border-brand-100">
-              Database Coverage
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-display font-bold text-slate-900 tracking-tight">
-              {getSectionConfig('database-footprint').title}
-            </h2>
-            <p className="text-slate-500 text-xs sm:text-sm md:text-base">
-              {getSectionConfig('database-footprint').subtitle}
-            </p>
-          </div>
-
-          <ActiveLeadsHeatmap />
-
-        </div>
-      </section>
-      )}
+      {/* Global B2B Reach & Heatmap Visualizer moved to dedicated AI Agent Miner page */}
 
       {/* Live Messaging Outreach builder */}
       {getSectionConfig('outbound-builder').isVisible && (
@@ -1158,151 +1128,7 @@ export default function App() {
         </div>
       </section>
 
-      {/* CRM Sync Compatibility Segment */}
-      <section className="py-16 md:py-24 bg-white border-b border-slate-100" id="crm-compatibility">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          
-          <div className="text-center max-w-2xl mx-auto mb-12 md:mb-16 space-y-3">
-            <span className="bg-brand-50 text-brand-700 text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full border border-brand-100">
-              Direct Push Integrations
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-display font-bold text-slate-900 tracking-tight">
-              Enterprise CRM Sync Compatibility
-            </h2>
-            <p className="text-slate-500 text-sm md:text-base">
-              Say goodbye to manual scraping. Export and stream your triple-verified lists directly into your marketing workflows or CRM systems with 1-click mapping.
-            </p>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Salesforce Integration Card */}
-            <div className="bg-slate-50 border border-slate-200/60 rounded-3xl p-6 md:p-8 space-y-6 hover:shadow-xl hover:border-blue-200 transition duration-300 group">
-              <div className="flex items-center justify-between">
-                <div className="w-12 h-12 bg-blue-55 text-blue-600 bg-blue-50 rounded-2xl flex items-center justify-center border border-blue-100 shadow-sm">
-                  {/* Salesforce Custom Cloud SVG */}
-                  <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M19.1 10.3c-.2-.1-.4-.2-.6-.2h-.1c-1.1-2.4-3.5-3.9-6.1-3.6-2.1.2-3.9 1.5-4.7 3.4-.6-.4-1.3-.5-2-.4-1.7.3-3 1.8-3 3.5 0 2 1.6 3.6 3.6 3.6H19c1.7 0 3-1.4 3-3.1 0-1.8-1.3-3.1-2.9-3.2z" />
-                  </svg>
-                </div>
-                <span className="bg-blue-100/70 text-blue-700 font-mono text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded-md border border-blue-200">
-                  Native App
-                </span>
-              </div>
-              <div className="space-y-2">
-                <h4 className="text-lg font-bold text-slate-800 font-display group-hover:text-blue-600 transition">Salesforce Cloud Link</h4>
-                <p className="text-slate-500 text-xs leading-relaxed">
-                  Map leads instantly into custom campaign groups, assign directly to SDR owners, and audit duplicate indexes automatically prior to billing.
-                </p>
-              </div>
-              <div className="pt-4 border-t border-slate-200/50 flex items-center justify-between text-[11px] font-mono text-slate-500">
-                <span>Field Mapping</span>
-                <span className="text-emerald-600 font-bold flex items-center gap-1">
-                  <Check className="w-3.5 h-3.5" /> 32 Custom Fields
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5 text-xs text-blue-600 font-bold">
-                <span>Configure sync parameters</span>
-                <ChevronRight className="w-4 h-4" />
-              </div>
-            </div>
-
-            {/* HubSpot Integration Card */}
-            <div className="bg-slate-50 border border-slate-200/60 rounded-3xl p-6 md:p-8 space-y-6 hover:shadow-xl hover:border-orange-200 transition duration-300 group">
-              <div className="flex items-center justify-between">
-                <div className="w-12 h-12 bg-orange-55 text-orange-600 bg-orange-50 rounded-2xl flex items-center justify-center border border-orange-100 shadow-sm">
-                  {/* HubSpot Sprocket SVG */}
-                  <svg viewBox="0 0 24 24" className="w-6 h-6 fill-none stroke-current stroke-[2.2]" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="12" cy="7" r="2.5" />
-                    <circle cx="7" cy="15.5" r="2.5" />
-                    <circle cx="17" cy="15.5" r="2.5" />
-                    <line x1="12" y1="9.5" x2="12" y2="13.5" />
-                    <line x1="12" y1="13.5" x2="8.75" y2="13.5" />
-                    <line x1="12" y1="13.5" x2="15.25" y2="13.5" />
-                  </svg>
-                </div>
-                <span className="bg-orange-100/70 text-orange-700 font-mono text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded-md border border-orange-200">
-                  1-Click Auth
-                </span>
-              </div>
-              <div className="space-y-2">
-                <h4 className="text-lg font-bold text-slate-800 font-display group-hover:text-orange-600 transition">HubSpot CRM Setup</h4>
-                <p className="text-slate-500 text-xs leading-relaxed">
-                  Export verified contacts as marketing leads or full company objects with corporate domain association mapped instantly.
-                </p>
-              </div>
-              <div className="pt-4 border-t border-slate-200/50 flex items-center justify-between text-[11px] font-mono text-slate-500">
-                <span>Export Speed</span>
-                <span className="text-emerald-600 font-bold flex items-center gap-1">
-                  <Check className="w-3.5 h-3.5" /> Near Instantaneous
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5 text-xs text-orange-600 font-bold">
-                <span>Initiate HubSpot link</span>
-                <ChevronRight className="w-4 h-4" />
-              </div>
-            </div>
-
-            {/* Pipedrive Integration Card */}
-            <div className="bg-slate-50 border border-slate-200/60 rounded-3xl p-6 md:p-8 space-y-6 hover:shadow-xl hover:border-emerald-200 transition duration-300 group">
-              <div className="flex items-center justify-between">
-                <div className="w-12 h-12 bg-emerald-55 text-emerald-600 bg-emerald-50 rounded-2xl flex items-center justify-center border border-emerald-100 shadow-sm">
-                  {/* Pipedrive Arrow SVG */}
-                  <svg viewBox="0 0 24 24" className="w-6 h-6 fill-none stroke-current stroke-[2.2]" xmlns="http://www.w3.org/2000/svg">
-                    <rect x="4" y="4" width="6" height="5" rx="1" />
-                    <rect x="14" y="4" width="6" height="5" rx="1" />
-                    <rect x="4" y="15" width="6" height="5" rx="1" />
-                    <rect x="14" y="15" width="6" height="5" rx="1" />
-                    <path d="M10 6.5h4M10 17.5h4" />
-                  </svg>
-                </div>
-                <span className="bg-emerald-100/70 text-emerald-700 font-mono text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded-md border border-emerald-200">
-                  Ready API
-                </span>
-              </div>
-              <div className="space-y-2">
-                <h4 className="text-lg font-bold text-slate-800 font-display group-hover:text-emerald-600 transition">Pipedrive Pipelines</h4>
-                <p className="text-slate-500 text-xs leading-relaxed">
-                  Build custom deal pipelines populated with rich context. Automatically attach telephone, LinkedIn, region and sector details.
-                </p>
-              </div>
-              <div className="pt-4 border-t border-slate-200/50 flex items-center justify-between text-[11px] font-mono text-slate-500">
-                <span>Webhook Integration</span>
-                <span className="text-emerald-600 font-bold flex items-center gap-1">
-                  <Check className="w-3.5 h-3.5" /> Fully Supported
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5 text-xs text-emerald-600 font-bold">
-                <span>Create pipeline mapping</span>
-                <ChevronRight className="w-4 h-4" />
-              </div>
-            </div>
-          </div>
-
-          {/* Quick-stats and list of supported minor platforms */}
-          <div className="mt-12 p-6 bg-slate-50/50 rounded-2xl border border-slate-200/40 flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold">
-                <Database className="w-5 h-5 text-brand-450 text-brand-400" />
-              </div>
-              <div>
-                <h5 className="text-sm font-bold text-slate-800">Need another integration connector?</h5>
-                <p className="text-xs text-slate-500">
-                  We generate custom CSV exports fully structurally compatible with Apollo, Zoho, Outreach, and Microsoft Dynamics.
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex flex-wrap gap-2.5">
-              {['Zoho CRM', 'Apollo.io', 'Clay', 'Microsoft Dynamics', 'Zapier Connector', 'Webhook API'].map((item) => (
-                <span key={item} className="text-[10px] font-mono font-bold bg-white text-slate-600 border border-slate-200 px-2.5 py-1.5 rounded-lg shadow-sm">
-                  {item}
-                </span>
-              ))}
-            </div>
-          </div>
-
-        </div>
-      </section>
 
       {/* Client Evaluations */}
       {getSectionConfig('client-evaluations').isVisible && (
@@ -1754,6 +1580,91 @@ export default function App() {
       )}
 
         </>
+      ) : currentPage === 'agent-miner' ? (
+        <div className="py-12 bg-slate-50 min-h-[70vh]" id="agent-miner-page">
+          {/* Header of the dedicated page */}
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 mb-8">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+              <div>
+                <button
+                  onClick={() => {
+                    setCurrentPage('home');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="inline-flex items-center gap-1.5 text-xs text-brand-650 hover:text-brand-750 font-bold transition mb-2"
+                >
+                  ← Back to Main Home Page
+                </button>
+                <h1 className="text-2xl font-display font-bold text-slate-900 tracking-tight">
+                  Choose an AI Agent &amp; Worldwide Reach Hub
+                </h1>
+                <p className="text-xs text-slate-400 mt-1">
+                  Access live geolocated lists and set up automated scraper validation agents.
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setCurrentPage('home');
+                  setTimeout(() => {
+                    const el = document.getElementById('list-estimator');
+                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  }, 150);
+                }}
+                className="bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition cursor-pointer"
+              >
+                Estimate Cost Calculator
+              </button>
+            </div>
+          </div>
+          
+          {/* Page Section 1: Choose an AI Agent to Build Your Lead List */}
+          {getSectionConfig('ai-agents-section').isVisible && (
+            <div className="pb-16 relative" id="ai-agents-section">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                
+                <div className="text-center max-w-3xl mx-auto mb-10 md:mb-16 space-y-3">
+                  <span className="bg-amber-100/60 text-amber-800 text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full border border-amber-200 inline-flex items-center gap-1 shadow-sm">
+                    <Sparkles className="w-3 h-3 text-amber-500 animate-pulse" />
+                    Automated AI Sourcing Agents
+                  </span>
+                  <h2 className="text-3xl sm:text-4xl font-display font-bold text-slate-900 tracking-tight">
+                    {getSectionConfig('ai-agents-section').title}
+                  </h2>
+                  <p className="text-slate-500 text-xs sm:text-sm md:text-base">
+                    {getSectionConfig('ai-agents-section').subtitle}
+                  </p>
+                </div>
+
+                {/* Core AIAgentBuilder block */}
+                <AIAgentBuilder />
+
+              </div>
+            </div>
+          )}
+
+          {/* Page Section 2: Worldwide Reach & Lead Heatmap */}
+          {getSectionConfig('database-footprint').isVisible && (
+            <div className="py-16 bg-white border-t border-b border-slate-150/40 relative" id="database-footprint">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                
+                <div className="text-center max-w-3xl mx-auto mb-10 md:mb-16 space-y-3">
+                  <span className="bg-brand-50 text-brand-700 text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full border border-brand-100">
+                    Database Coverage &amp; Heatmap
+                  </span>
+                  <h2 className="text-3xl sm:text-4xl font-display font-bold text-slate-900 tracking-tight">
+                    {getSectionConfig('database-footprint').title}
+                  </h2>
+                  <p className="text-slate-500 text-xs sm:text-sm md:text-base">
+                    {getSectionConfig('database-footprint').subtitle}
+                  </p>
+                </div>
+
+                <ActiveLeadsHeatmap />
+
+              </div>
+            </div>
+          )}
+        </div>
       ) : currentPage === 'admin' ? (
         <AdminPanel 
           onClose={() => setCurrentPage('home')}
