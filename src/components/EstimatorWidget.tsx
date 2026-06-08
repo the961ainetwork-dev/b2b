@@ -46,6 +46,7 @@ export default function EstimatorWidget() {
   const [sampleCompany, setSampleCompany] = useState('');
   const [isBuildingSample, setIsBuildingSample] = useState(false);
   const [sampleStep, setSampleStep] = useState<1 | 2 | 3>(1);
+  const [isDownloadingCSV, setIsDownloadingCSV] = useState(false);
 
   // Real-time Validation States
   const [sampleErrors, setSampleErrors] = useState<Record<string, string>>({});
@@ -181,41 +182,48 @@ export default function EstimatorWidget() {
 
   // Compile a mock CSV file of 25 matched leads for instant download
   const handleDownloadCSV = () => {
-    // Generate filtered samples or general ones
-    const matches = MOCK_CONTACTS.map((c, i) => ({
-      ...c,
-      industry: filters.industry,
-      country: filters.geography.split(' ')[0],
-      title: filters.jobLevel.split(' ')[0] + ' ' + c.title.split(' ').slice(1).join(' '),
-      email: `${c.firstName.toLowerCase()}.${c.lastName.toLowerCase()}@${c.company.toLowerCase().replace(/[^a-z]/g, '') || 'b2bmatched'}.com`
-    }));
+    if (isDownloadingCSV) return;
+    setIsDownloadingCSV(true);
 
-    const csvHeaders = ['First Name', 'Last Name', 'Job Title', 'Business Email', 'Direct Phone', 'Company Name', 'Size', 'Country', 'Industry', 'LinkedIn Profile', 'Deliverability Status'];
-    const csvRows = matches.map(m => [
-      m.firstName,
-      m.lastName,
-      m.title,
-      m.email,
-      m.phone,
-      m.company,
-      m.size.split(' ')[0],
-      m.country,
-      m.industry,
-      m.linkedin,
-      m.verifiedStatus
-    ]);
+    setTimeout(() => {
+      // Generate filtered samples or general ones
+      const matches = MOCK_CONTACTS.map((c, i) => ({
+        ...c,
+        industry: filters.industry,
+        country: filters.geography.split(' ')[0],
+        title: filters.jobLevel.split(' ')[0] + ' ' + c.title.split(' ').slice(1).join(' '),
+        email: `${c.firstName.toLowerCase()}.${c.lastName.toLowerCase()}@${c.company.toLowerCase().replace(/[^a-z]/g, '') || 'b2bmatched'}.com`
+      }));
 
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + [csvHeaders.join(','), ...csvRows.map(e => e.map(val => `"${val.replace(/"/g, '""')}"`).join(','))].join('\n');
-    
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    const filename = `point_to_b2b_leads_sample_${filters.industry.toLowerCase().replace(/\s+/g, '_')}.csv`;
-    link.setAttribute("download", filename);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      const csvHeaders = ['First Name', 'Last Name', 'Job Title', 'Business Email', 'Direct Phone', 'Company Name', 'Size', 'Country', 'Industry', 'LinkedIn Profile', 'Deliverability Status'];
+      const csvRows = matches.map(m => [
+        m.firstName,
+        m.lastName,
+        m.title,
+        m.email,
+        m.phone,
+        m.company,
+        m.size.split(' ')[0],
+        m.country,
+        m.industry,
+        m.linkedin,
+        m.verifiedStatus
+      ]);
+
+      const csvContent = "data:text/csv;charset=utf-8," 
+        + [csvHeaders.join(','), ...csvRows.map(e => e.map(val => `"${val.replace(/"/g, '""')}"`).join(','))].join('\n');
+      
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      const filename = `zrolodex_b2b_leads_sample_${filters.industry.toLowerCase().replace(/\s+/g, '_')}.csv`;
+      link.setAttribute("download", filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      setIsDownloadingCSV(false);
+    }, 1500);
   };
 
   return (
@@ -667,10 +675,20 @@ export default function EstimatorWidget() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-md mx-auto pt-4">
                     <button
                       onClick={handleDownloadCSV}
-                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 px-4 rounded-xl transition duration-150 flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-emerald-600/10"
+                      disabled={isDownloadingCSV}
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-800 text-white font-semibold py-3 px-4 rounded-xl transition duration-150 flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed shadow-lg shadow-emerald-600/10"
                     >
-                      <Download className="w-4 h-4" />
-                      Download Spreadsheet
+                      {isDownloadingCSV ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin text-white" />
+                          Preparing CSV...
+                        </>
+                      ) : (
+                        <>
+                          <Download className="w-4 h-4" />
+                          Download CSV Sample
+                        </>
+                      )}
                     </button>
                     <button
                       onClick={() => setIsRequestingSample(false)}

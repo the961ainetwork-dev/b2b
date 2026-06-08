@@ -22,6 +22,8 @@ export default function OutreachGenerator({ selectedIndustry = 'Technology & Saa
   const [objective, setObjective] = useState<'demo' | 'audit' | 'partnership'>('demo');
   const [channel, setChannel] = useState<'email' | 'linkedin' | 'coldcall'>('email');
   const [copied, setCopied] = useState(false);
+  const [copiedSubject, setCopiedSubject] = useState(false);
+  const [copiedBody, setCopiedBody] = useState(false);
 
   // Helper to extract clean tier name
   const levelName = selectedJobLevel.split(' ')[0] || 'Executive';
@@ -160,14 +162,63 @@ export default function OutreachGenerator({ selectedIndustry = 'Technology & Saa
         <div className="bg-slate-950 border border-white/10 rounded-2xl overflow-hidden p-5 space-y-4">
           
           {channel !== 'coldcall' && (
-            <div className="border-b border-white/5 pb-3">
-              <span className="text-[10px] text-slate-500 font-mono uppercase tracking-wider block">Subject / Headline:</span>
-              <p className="text-xs text-teal-300 font-semibold font-display mt-1">{activeTemplate.subject}</p>
+            <div className="border-b border-white/5 pb-3 flex items-start justify-between gap-4">
+              <div className="flex-1">
+                <span className="text-[10px] text-slate-500 font-mono uppercase tracking-wider block">Subject / Headline:</span>
+                <p className="text-xs text-teal-300 font-semibold font-display mt-1">{activeTemplate.subject}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(activeTemplate.subject);
+                  setCopiedSubject(true);
+                  setTimeout(() => setCopiedSubject(false), 2000);
+                }}
+                className="text-[10px] bg-slate-800 hover:bg-slate-700 font-medium font-mono text-slate-300 hover:text-white px-2.5 py-1 rounded-lg border border-white/5 flex items-center gap-1.5 transition shrink-0 cursor-pointer"
+                title="Copy Subject only"
+              >
+                {copiedSubject ? (
+                  <>
+                    <Check className="w-3 h-3 text-emerald-400" />
+                    <span>Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3 h-3" />
+                    <span>Copy</span>
+                  </>
+                )}
+              </button>
             </div>
           )}
 
-          <div>
-            <span className="text-[10px] text-slate-500 font-mono uppercase tracking-wider block">Message Content:</span>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] text-slate-500 font-mono uppercase tracking-wider block">Message Content:</span>
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(activeTemplate.body);
+                  setCopiedBody(true);
+                  setTimeout(() => setCopiedBody(false), 2000);
+                }}
+                className="text-[10px] bg-slate-800 hover:bg-slate-700 font-medium font-mono text-slate-300 hover:text-white px-2.5 py-1 rounded-lg border border-white/5 flex items-center gap-1.5 transition shrink-0 cursor-pointer"
+                title="Copy body text only"
+              >
+                {copiedBody ? (
+                  <>
+                    <Check className="w-3 h-3 text-emerald-400" />
+                    <span>Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3 h-3" />
+                    <span>Copy Body</span>
+                  </>
+                )}
+              </button>
+            </div>
+            
             <p className="text-xs text-slate-200 leading-relaxed font-sans mt-2 whitespace-pre-line antialiased">
               {activeTemplate.body.split(/({{[^}]+}})/g).map((chunk, index) => {
                 const isToken = chunk.startsWith('{{') && chunk.endsWith('}}');
@@ -193,7 +244,7 @@ export default function OutreachGenerator({ selectedIndustry = 'Technology & Saa
               className="bg-brand-600 hover:bg-brand-700 text-white font-semibold text-xs px-4 py-2 rounded-xl transition duration-150 flex items-center gap-1.5 cursor-pointer shadow-md shadow-brand-950"
             >
               {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-              {copied ? 'Copied Successfully' : 'Copy Outreach Template'}
+              {copied ? 'Copied Successfully' : 'Copy Full Template'}
             </button>
           </div>
 

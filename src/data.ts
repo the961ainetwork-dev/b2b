@@ -226,7 +226,7 @@ export const TESTIMONIALS: TestimonialItem[] = [
     name: 'Rebecca Sterling',
     role: 'VP of Growth & Demand Gen',
     company: 'SynergyFlow SaaS',
-    quote: 'Point to Business Services helped us map our entire target market in under 48 hours. The accuracy of their lists is unbeatable—we saw a mere 2.1% bounce rate on our outbound cold email campaign!',
+    quote: 'ZROLODEX.LIVE helped us map our entire target market in under 48 hours. The accuracy of their lists is unbeatable—we saw a mere 2.1% bounce rate on our outbound cold email campaign!',
     rating: 5
   },
   {

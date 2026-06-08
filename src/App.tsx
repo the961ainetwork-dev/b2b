@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Target, 
@@ -18,6 +18,9 @@ import {
   Briefcase, 
   RefreshCw, 
   Calendar,
+  Cpu,
+  Network,
+  Zap,
   Send,
   Sparkles,
   Info,
@@ -25,16 +28,197 @@ import {
   ChevronDown,
   Menu,
   X,
-  AlertCircle
+  AlertCircle,
+  Search,
+  Shield
 } from 'lucide-react';
 import { SERVICES, TESTIMONIALS, FAQS, COMPETITIVE_MATRIX } from './data';
+import type { TestimonialItem } from './types';
 import EstimatorWidget from './components/EstimatorWidget';
 import RecordPreview from './components/RecordPreview';
 import OutreachGenerator from './components/OutreachGenerator';
+import ActiveLeadsHeatmap from './components/ActiveLeadsHeatmap';
+import AIAgentBuilder from './components/AIAgentBuilder';
+import ServicePages from './components/ServicePages';
+import GuidedTour from './components/GuidedTour';
+import ServiceOptimizer from './components/ServiceOptimizer';
+import LiveActivityTicker from './components/LiveActivityTicker';
+import EmailVerifierWidget from './components/EmailVerifierWidget';
+import AdminPanel from './components/AdminPanel';
+import type { AdminSectionConfig } from './components/AdminPanel';
+
+const DEFAULT_SECTIONS: AdminSectionConfig[] = [
+  { id: 'hero-section', name: 'Hero Header Panel', title: 'Power Your Outbound with Localized B2B Contact Leads', subtitle: 'Access manual triple-verified business profiles & custom cold outreach data sequences matching your ideal client target persona.', isVisible: true, order: 1 },
+  { id: 'competitive-edge-section', name: 'Premium Competitive Edge', title: 'Your Competitive Edge in the Market', subtitle: 'Enterprise-grade verification pipelines designed to build deep market access safely.', isVisible: true, order: 2 },
+  { id: 'ai-agents-section', name: 'AI Sales Builders & Agents', title: 'Choose an AI Agent to Build Your Lead List', subtitle: 'Say goodbye to tedious filtering queries. Select the tailored agent of your industry focus below, prompt your custom criteria, and watch the validation loop build real-time matched output.', isVisible: true, order: 3 },
+  { id: 'calculator-section', name: 'B2B Leads Cost Estimator', title: 'Instant Database Match & Pricing Estimate', subtitle: 'Establish your parameters below. Our database index counts will calculate matches instantly, letting you request custom samples with zero obligations.', isVisible: true, order: 4 },
+  { id: 'core-services', name: 'Core Service Portfolios', title: 'End-to-End B2B Data & Marketing Services', subtitle: 'From fresh databases to complete client appointment acquisition. We cover every node of your sales outreach efforts.', isVisible: true, order: 5 },
+  { id: 'prospect-explorer', name: 'B2B Database Prospect Explorer', title: 'Inspect Our B2B Database Record Fields', subtitle: 'Every profile delivered is packed with direct dials, verified company demographics, and verified email keys. Review actual format examples below.', isVisible: true, order: 6 },
+  { id: 'database-footprint', name: 'Our Growing Local Database Footprint', title: 'Worldwide Reach & Lead Heatmap', subtitle: 'Establish high-fidelity geolocated campaign indices. Filter the global directory by key metrics and regions to observe density clusters instantly.', isVisible: true, order: 7 },
+  { id: 'outbound-builder', name: 'AI Outreach Copywriter Builder', title: 'Instantly Generate Sales Sequences', subtitle: 'Connect the data you acquire directly to relevant outreach messaging models. Pick your core sales channel and objectives to copy pre-optimized frameworks instantly.', isVisible: true, order: 8 },
+  { id: 'workflow-steps', name: '4-Step Workflow Framework', title: 'From Custom Request to Campaign Success in 4 Steps', subtitle: 'A streamlined verification loop guarantees that you never waste outbound marketing budget on bounced email keys.', isVisible: true, order: 9 },
+  { id: 'client-evaluations', name: 'Client Evaluations & Wall of Stories', title: 'Trusted by 2,000+ Global Marketing Teams', subtitle: 'See how modern SDRs, demand planners, and agency executives scale up outreach ROI with our vetted sets.', isVisible: true, order: 10 },
+  { id: 'faq', name: 'Frequently Asked Questions', title: 'Answers to Verification & Compliance Frameworks', subtitle: 'Clear summaries about our deliverability backups, manual checks & custom queries.', isVisible: true, order: 11 },
+  { id: 'contact-section', name: 'Instant Custom Quote Desk', title: 'Request Custom Sample Leads Stack or Quote Details', subtitle: 'Tell us your niche filter coordinates, state parameters & quantity to test 25 free leads.', isVisible: true, order: 12 }
+];
+
+const getInitialSections = (): AdminSectionConfig[] => {
+  try {
+    const saved = localStorage.getItem('zrolodex_admin_sections');
+    if (saved) return JSON.parse(saved);
+  } catch (e) {
+    console.warn(e);
+  }
+  return DEFAULT_SECTIONS;
+};
+
+const getInitialStories = (): TestimonialItem[] => {
+  try {
+    const saved = localStorage.getItem('zrolodex_admin_stories');
+    if (saved) return JSON.parse(saved);
+  } catch (e) {
+    console.warn(e);
+  }
+  return TESTIMONIALS;
+};
+
+const getInitialSiteTitle = (): string => {
+  try {
+    const saved = localStorage.getItem('zrolodex_admin_siteTitle');
+    if (saved) return saved;
+  } catch (e) {
+    console.warn(e);
+  }
+  return 'ZROLODEX.LIVE';
+};
 
 export default function App() {
+  const [currentPage, setCurrentPage] = useState<'home' | 'srv-1' | 'srv-2' | 'srv-3' | 'srv-4' | 'get-started' | 'admin'>('home');
+  const [sectionsState, setSectionsState] = useState<AdminSectionConfig[]>(getInitialSections);
+  const [storiesState, setStoriesState] = useState<TestimonialItem[]>(getInitialStories);
+  const [siteTitleState, setSiteTitleState] = useState<string>(getInitialSiteTitle);
+
+  const getSectionConfig = (id: string): { isVisible: boolean; title: string; subtitle: string; } => {
+    const config = sectionsState.find(s => s.id === id);
+    if (!config) return { isVisible: true, title: '', subtitle: '' };
+    return {
+      isVisible: config.isVisible,
+      title: config.title,
+      subtitle: config.subtitle
+    };
+  };
+  const [servicesMenuOpen, setServicesMenuOpen] = useState(false);
   const [activeFAQ, setActiveFAQ] = useState<string | null>(null);
+  const [faqSearchQuery, setFaqSearchQuery] = useState('');
+  const [faqSelectedCategory, setFaqSelectedCategory] = useState('all');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [tourActive, setTourActive] = useState(false);
+
+  useEffect(() => {
+    try {
+      const hasSeenTour = localStorage.getItem('hasSeenTourV1');
+      if (!hasSeenTour) {
+        const timer = setTimeout(() => {
+          setTourActive(true);
+        }, 1500);
+        return () => clearTimeout(timer);
+      }
+    } catch (e) {
+      console.warn('LocalStorage not available:', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      document.title = `${siteTitleState} | Verified Lead Indexer`;
+    } catch (e) {
+      console.warn('Document title update failed:', e);
+    }
+  }, [siteTitleState]);
+
+  const handleCloseTour = () => {
+    setTourActive(false);
+    try {
+      localStorage.setItem('hasSeenTourV1', 'true');
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleFinishSetupFromTour = (industry: string, quantity: string) => {
+    // 1. Ensure contact section is visible in sections state
+    const sectionConfig = sectionsState.find(s => s.id === 'contact-section');
+    if (sectionConfig && !sectionConfig.isVisible) {
+      const updated = sectionsState.map(s => s.id === 'contact-section' ? { ...s, isVisible: true } : s);
+      setSectionsState(updated);
+      try {
+        localStorage.setItem('zrolodex_admin_sections', JSON.stringify(updated));
+      } catch (e) {
+        console.warn(e);
+      }
+    }
+    
+    // 2. Pre-fill target campaign fields
+    setQuoteIndustry(industry);
+    setQuoteQuantity(quantity);
+    setQuoteMessage(`Hi Zrolodex team, I completed the guided onboarding tour and would like a custom list match for the ${industry} niche with the ${quantity} tier.`);
+    
+    // 3. Mark contact fields as touched so UI validation looks pre-validated/active
+    setQuoteTouched(prev => ({
+      ...prev,
+      industry: true,
+      message: true
+    }));
+
+    // 4. Close the tour overlay
+    setTourActive(false);
+    try {
+      localStorage.setItem('hasSeenTourV1', 'true');
+    } catch (e) {
+      console.error(e);
+    }
+
+    // 5. Smoothly scroll to Quote Desk and focus the name input
+    setTimeout(() => {
+      const el = document.getElementById('contact-section');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const inputEl = el.querySelector('input[placeholder="Your Name"]');
+        if (inputEl) {
+          (inputEl as HTMLInputElement).focus();
+        }
+      }
+    }, 180);
+  };
+
+  const startGuidedTour = () => {
+    setMobileMenuOpen(false);
+    setServicesMenuOpen(false);
+    setCurrentPage('home');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setTimeout(() => {
+      setTourActive(true);
+    }, 150);
+  };
+
+  const navigateToAnchor = (targetId: string) => {
+    setMobileMenuOpen(false);
+    setServicesMenuOpen(false);
+    if (currentPage !== 'home') {
+      setCurrentPage('home');
+      setTimeout(() => {
+        const el = document.getElementById(targetId);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 150);
+    } else {
+      const el = document.getElementById(targetId);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  };
   
   // Custom Quotation state
   const [quoteIndustry, setQuoteIndustry] = useState('Technology & SaaS');
@@ -185,44 +369,170 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
           
           {/* Logo brand */}
-          <div className="flex items-center gap-2.5">
-            <div className="bg-brand-700 text-white w-10 h-10 rounded-xl flex items-center justify-center shadow-md shadow-brand-700/20">
-              <Target className="w-5 h-5 animate-pulse" />
+          <button 
+            onClick={() => {
+              setCurrentPage('home');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className="flex items-center gap-2.5 text-left border-none bg-transparent cursor-pointer group"
+          >
+            <div className="bg-brand-700 text-white w-10 h-10 rounded-xl flex items-center justify-center shadow-md shadow-brand-700/20 group-hover:scale-105 transition-transform duration-200">
+              <Database className="w-5 h-5" />
             </div>
             <div>
-              <span className="font-display font-bold text-slate-900 text-lg md:text-xl tracking-tight block">
-                Point <span className="text-brand-600">To Business</span>
+              <span className="font-display font-black text-slate-900 text-lg md:text-xl tracking-tight block uppercase text-brand-705 bg-gradient-to-r from-brand-700 to-indigo-650 bg-clip-text text-transparent">
+                {siteTitleState}
               </span>
               <span className="text-[9px] font-mono font-bold text-slate-400 tracking-wider uppercase block -mt-1">
-                Services & Lead Core
+                Verified Lead Indexer
               </span>
             </div>
-          </div>
+          </button>
 
           {/* Desktop Navigation Links */}
           <nav className="hidden md:flex items-center gap-6 text-sm font-semibold text-slate-600">
-            <a href="#list-estimator" className="hover:text-brand-600 transition">Target Calculator</a>
-            <a href="#core-services" className="hover:text-brand-600 transition">Our Services</a>
-            <a href="#prospect-explorer" className="hover:text-brand-600 transition">Prospect Explorer</a>
-            <a href="#outbound-builder" className="hover:text-brand-600 transition">Message Builder</a>
-            <a href="#client-evaluations" className="hover:text-brand-600 transition">Why Choose Us</a>
-            <a href="#faq" className="hover:text-brand-600 transition">FAQ</a>
+            <button 
+              onClick={() => navigateToAnchor('ai-agents-section')}
+              className="hover:text-brand-600 text-brand-600 font-bold flex items-center gap-1 transition cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5 animate-pulse text-amber-500" />
+              AI Agent Miner
+            </button>
+            <button 
+              onClick={() => navigateToAnchor('list-estimator')}
+              className="hover:text-brand-600 transition cursor-pointer"
+            >
+              Target Calculator
+            </button>
+
+            {/* Our Services Hover Dropdown */}
+            <div 
+              className="relative py-2"
+              onMouseEnter={() => setServicesMenuOpen(true)}
+              onMouseLeave={() => setServicesMenuOpen(false)}
+            >
+              <button 
+                className={`hover:text-brand-600 transition flex items-center gap-1 cursor-pointer font-semibold ${
+                  ['srv-1', 'srv-2', 'srv-3', 'srv-4'].includes(currentPage) ? 'text-brand-600' : 'text-slate-600'
+                }`}
+              >
+                Our Capabilities
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${servicesMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              <AnimatePresence>
+                {servicesMenuOpen && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    className="absolute left-1/2 -translate-x-1/2 mt-1 w-72 bg-white border border-slate-200 rounded-2xl shadow-xl p-3 z-50 space-y-1"
+                  >
+                    <button 
+                      onClick={() => { setCurrentPage('srv-1'); setServicesMenuOpen(false); }}
+                      className={`w-full text-left p-2 rounded-xl hover:bg-slate-50 transition cursor-pointer ${
+                        currentPage === 'srv-1' ? 'bg-slate-50 text-brand-750 font-bold' : ''
+                      }`}
+                    >
+                      <span className="text-[11px] font-bold text-slate-800 block">B2B Core List Builder</span>
+                      <span className="text-[9.5px] text-slate-400 block -mt-0.5 font-normal leading-tight">Sourcing manually triple-verified lists.</span>
+                    </button>
+                    <button 
+                      onClick={() => { setCurrentPage('srv-2'); setServicesMenuOpen(false); }}
+                      className={`w-full text-left p-2 rounded-xl hover:bg-slate-50 transition cursor-pointer ${
+                        currentPage === 'srv-2' ? 'bg-slate-50 text-brand-750 font-bold' : ''
+                      }`}
+                    >
+                      <span className="text-[11px] font-bold text-slate-800 block">Outbound Campaigns &amp; Copywriter</span>
+                      <span className="text-[9.5px] text-slate-400 block -mt-0.5 font-normal leading-tight">Expert cold messaging strategy setups.</span>
+                    </button>
+                    <button 
+                      onClick={() => { setCurrentPage('srv-3'); setServicesMenuOpen(false); }}
+                      className={`w-full text-left p-2 rounded-xl hover:bg-slate-50 transition cursor-pointer ${
+                        currentPage === 'srv-3' ? 'bg-slate-50 text-brand-750 font-bold' : ''
+                      }`}
+                    >
+                      <span className="text-[11px] font-bold text-slate-800 block">Intelligent Data Enrichment</span>
+                      <span className="text-[9.5px] text-slate-400 block -mt-0.5 font-normal leading-tight">Appending phone numbers &amp; active positions.</span>
+                    </button>
+                    <button 
+                      onClick={() => { setCurrentPage('srv-4'); setServicesMenuOpen(false); }}
+                      className={`w-full text-left p-2 rounded-xl hover:bg-slate-50 transition cursor-pointer ${
+                        currentPage === 'srv-4' ? 'bg-slate-50 text-brand-750 font-bold' : ''
+                      }`}
+                    >
+                      <span className="text-[11px] font-bold text-slate-800 block">Event Seat Promotion</span>
+                      <span className="text-[9.5px] text-slate-400 block -mt-0.5 font-normal leading-tight">Fill virtual webinar roundtables by geo-radius.</span>
+                    </button>
+                    
+                    <div className="border-t border-slate-150 pt-2 mt-1.5">
+                      <button 
+                        onClick={() => { setCurrentPage('get-started'); setServicesMenuOpen(false); }}
+                        className="w-full text-left p-2 bg-amber-50 hover:bg-amber-100 rounded-xl transition flex items-center justify-between cursor-pointer border border-amber-200/40"
+                      >
+                        <div>
+                          <span className="text-[11px] font-extrabold text-amber-950 block font-display">Get Started Workshop</span>
+                          <span className="text-[9.5px] text-amber-700 block font-normal -mt-0.5">Interactive guided checklist.</span>
+                        </div>
+                        <Sparkles className="w-4 h-4 text-amber-500 animate-pulse shrink-0" />
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            <button 
+              onClick={() => navigateToAnchor('prospect-explorer')}
+              className="hover:text-brand-600 transition cursor-pointer"
+            >
+              Prospect Explorer
+            </button>
+            <button 
+              onClick={() => navigateToAnchor('outbound-builder')}
+              className="hover:text-brand-600 transition cursor-pointer"
+            >
+              Message Builder
+            </button>
+            <button 
+              onClick={() => navigateToAnchor('client-evaluations')}
+              className="hover:text-brand-600 transition cursor-pointer"
+            >
+              Why Choose Us
+            </button>
+            <button 
+              onClick={() => navigateToAnchor('faq')}
+              className="hover:text-brand-600 transition cursor-pointer"
+            >
+              FAQ
+            </button>
           </nav>
 
           {/* Desktop Call to Actions */}
           <div className="hidden md:flex items-center gap-3">
             <a 
-              href="mailto:info@pointtobusinessservices.com" 
+              href="mailto:contact@zrolodex.live" 
               className="text-xs font-mono font-bold text-slate-500 hover:text-brand-600 transition flex items-center gap-1"
             >
               <Mail className="w-3.5 h-3.5" />
-              info@pointtobusinessservices.com
+              contact@zrolodex.live
             </a>
+            
             <button 
-              onClick={scrolltoEstimator}
-              className="bg-brand-600 hover:bg-brand-700 text-white font-semibold text-xs px-4 py-2.5 rounded-xl transition duration-150 cursor-pointer shadow-md shadow-brand-500/10"
+              onClick={startGuidedTour}
+              className="bg-amber-500 hover:bg-amber-600 border border-amber-500 text-slate-950 font-bold text-xs px-4 py-2.5 rounded-xl transition duration-150 cursor-pointer shadow-md shadow-brand-500/10 flex items-center gap-1"
             >
-              Get Free Sample
+              <Sparkles className="w-3.5 h-3.5 text-slate-950 animate-pulse" />
+              Get Started Tour
+            </button>
+
+            <button 
+              onClick={() => setCurrentPage('admin')}
+              className="bg-slate-900 hover:bg-slate-800 border border-slate-800 text-amber-400 hover:text-amber-300 font-bold text-xs px-4 py-2.5 rounded-xl transition duration-150 cursor-pointer flex items-center gap-1.5 shadow-sm"
+              title="Open Admin CMS Console"
+            >
+              <Shield className="w-3.5 h-3.5 text-amber-500" />
+              <span>Admin Portal</span>
             </button>
           </div>
 
@@ -246,35 +556,66 @@ export default function App() {
             exit={{ opacity: 0, height: 0 }}
             className="md:hidden bg-white border-b border-slate-150 relative z-30 overflow-hidden"
           >
-            <div className="p-4 space-y-3 font-semibold text-slate-700 text-sm flex flex-col">
-              <a href="#list-estimator" onClick={() => setMobileMenuOpen(false)} className="py-2 border-b border-slate-50 hover:text-brand-600 transition">Target Calculator</a>
-              <a href="#core-services" onClick={() => setMobileMenuOpen(false)} className="py-2 border-b border-slate-50 hover:text-brand-600 transition">Our Services</a>
-              <a href="#prospect-explorer" onClick={() => setMobileMenuOpen(false)} className="py-2 border-b border-slate-50 hover:text-brand-600 transition">Prospect Explorer</a>
-              <a href="#outbound-builder" onClick={() => setMobileMenuOpen(false)} className="py-2 border-b border-slate-50 hover:text-brand-600 transition">Message Builder</a>
-              <a href="#client-evaluations" onClick={() => setMobileMenuOpen(false)} className="py-2 border-b border-slate-50 hover:text-brand-600 transition">Why Choose Us</a>
-              <a href="#faq" onClick={() => setMobileMenuOpen(false)} className="py-2 border-b border-slate-50 hover:text-brand-600 transition">FAQ</a>
+            <div className="p-4 space-y-4 font-semibold text-slate-700 text-sm flex flex-col">
               
-              <div className="pt-2 flex flex-col gap-2">
-                <a href="mailto:info@pointtobusinessservices.com" className="text-xs text-slate-500 font-mono flex items-center gap-1.5 py-1">
-                  <Mail className="w-4 h-4" />
-                  info@pointtobusinessservices.com
-                </a>
-                <button 
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    scrolltoEstimator();
-                  }}
-                  className="w-full bg-brand-600 text-white font-semibold py-3 text-center rounded-xl cursor-pointer"
+              <button 
+                onClick={startGuidedTour} 
+                className="py-2.5 px-3 bg-amber-50 border border-amber-200 text-amber-900 rounded-xl font-bold flex items-center justify-between text-left text-xs"
+              >
+                <div>
+                  <span className="block">Get Started Tour</span>
+                  <span className="block text-[10px] text-amber-700 font-normal">Our Interactive setup checklist</span>
+                </div>
+                <Sparkles className="w-5 h-5 text-amber-500 animate-pulse shrink-0" />
+              </button>
+
+              <div className="border-b border-slate-100 pb-2.5">
+                <span className="text-[10px] font-mono font-bold text-slate-400 block uppercase mb-1.5">Direct Service Pages</span>
+                <div className="grid grid-cols-2 gap-2 pl-2">
+                  <button onClick={() => { setCurrentPage('srv-1'); setMobileMenuOpen(false); }} className="text-left py-1 text-xs text-slate-600 hover:text-brand-600 font-medium">1. List Builder</button>
+                  <button onClick={() => { setCurrentPage('srv-2'); setMobileMenuOpen(false); }} className="text-left py-1 text-xs text-slate-600 hover:text-brand-600 font-medium font-display">2. Outbound campaigns</button>
+                  <button onClick={() => { setCurrentPage('srv-3'); setMobileMenuOpen(false); }} className="text-left py-1 text-xs text-slate-600 hover:text-brand-600 font-medium">3. CRM Appending</button>
+                  <button onClick={() => { setCurrentPage('srv-4'); setMobileMenuOpen(false); }} className="text-left py-1 text-xs text-slate-600 hover:text-brand-600 font-medium">4. Event Seat Promoter</button>
+                </div>
+              </div>
+
+              <div className="border-b border-slate-100 pb-2">
+                <span className="text-[10px] font-mono font-bold text-slate-400 block uppercase mb-1.5">Interactive Dashboard</span>
+                <div className="flex flex-col pl-2 gap-2 text-xs">
+                  <button onClick={() => navigateToAnchor('ai-agents-section')} className="text-left py-1 hover:text-brand-600 text-brand-600 font-bold flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-amber-500 animate-pulse" />
+                    AI Agent Miner
+                  </button>
+                  <button onClick={() => navigateToAnchor('list-estimator')} className="text-left py-1 hover:text-brand-600">Target Calculator</button>
+                  <button onClick={() => navigateToAnchor('prospect-explorer')} className="text-left py-1 hover:text-brand-600">Prospect Explorer</button>
+                  <button onClick={() => navigateToAnchor('outbound-builder')} className="text-left py-1 hover:text-brand-600 font-display">Message Builder</button>
+                  <button onClick={() => navigateToAnchor('client-evaluations')} className="text-left py-1 hover:text-brand-600">Why Choose Us</button>
+                  <button onClick={() => navigateToAnchor('faq')} className="text-left py-1 hover:text-brand-600">FAQ</button>
+                </div>
+              </div>
+
+              <div className="pt-2 flex flex-col gap-2 border-t border-slate-100">
+                <button
+                  onClick={() => { setCurrentPage('admin'); setMobileMenuOpen(false); }}
+                  className="w-full py-2.5 px-3 bg-slate-900 border border-slate-800 text-amber-500 font-bold rounded-xl flex items-center justify-center gap-2 text-xs cursor-pointer"
                 >
-                  Get Free Core Sample
+                  <Shield className="w-4 h-4 text-amber-500" />
+                  <span>Administrative CMS (/admin)</span>
                 </button>
+                <a href="mailto:contact@zrolodex.live" className="text-xs text-slate-500 font-mono flex items-center gap-1.5 py-1 justify-center mt-1">
+                  <Mail className="w-4 h-4" />
+                  contact@zrolodex.live
+                </a>
               </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Hero Block */}
+      {currentPage === 'home' ? (
+        <>
+          {/* Hero Block */}
+      {getSectionConfig('hero-section').isVisible && (
       <section className="relative bg-gradient-to-b from-white via-slate-50/50 to-slate-100/30 pt-12 md:pt-20 pb-16 md:pb-24 overflow-hidden" id="hero-section">
         <div className="absolute inset-0 bg-grid-pattern opacity-[0.02]" />
         
@@ -296,10 +637,10 @@ export default function App() {
 
               <div className="space-y-4">
                 <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display font-bold text-slate-900 tracking-tight leading-[1.1]">
-                  Verified B2B Email Lists & <span className="text-brand-600 relative inline-block">Lead Generation</span>
+                  {getSectionConfig('hero-section').title}
                 </h1>
-                <p className="text-slate-500 text-base md:text-lg max-w-xl leading-relaxed">
-                  Power your outbound outreach with triple-verified contact data for decision makers. Enjoy 95%+ guaranteed deliverability on every list built specifically to your sector since 2014.
+                <p className="text-slate-550 text-slate-500 text-xs sm:text-sm md:text-base max-w-xl leading-relaxed">
+                  {getSectionConfig('hero-section').subtitle}
                 </p>
               </div>
 
@@ -382,7 +723,7 @@ export default function App() {
 
                 <div className="border-t border-slate-800 pt-4 text-center">
                   <p className="text-slate-400 text-xs">
-                    "Every lead we source goes through the Point double-blind validation loop."
+                    "Every lead we source goes through the Zrolodex double-blind validation loop."
                   </p>
                 </div>
               </div>
@@ -392,8 +733,121 @@ export default function App() {
 
         </div>
       </section>
+      )}
+
+      {/* Live Activity Ticker */}
+      <LiveActivityTicker />
+
+      {/* Your Competitive Edge & Capabilities Columns section */}
+      {getSectionConfig('competitive-edge-section').isVisible && (
+      <section className="py-16 md:py-24 bg-white relative border-b border-slate-100/80 overflow-hidden" id="competitive-edge-section">
+        {/* Decorative elements */}
+        <div className="absolute top-1/2 left-0 w-72 h-72 bg-slate-50 rounded-full blur-3xl pointer-events-none -translate-x-1/2 -translate-y-1/2 opacity-60" />
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-brand-50/40 rounded-full blur-3xl pointer-events-none translate-x-1/3 translate-y-1/3 opacity-80" />
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 space-y-12 md:space-y-18">
+          
+          {/* First Row: 2-column descriptive row */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-start">
+            <div className="lg:col-span-5 space-y-3.5">
+              <span className="bg-brand-50 text-brand-700 text-[10px] font-mono font-extrabold uppercase tracking-widest px-3 py-1 rounded-full border border-brand-100 shadow-sm inline-block">
+                Strategic Position
+              </span>
+              <h2 className="text-3xl sm:text-4xl font-display font-medium text-slate-900 tracking-tight leading-[1.15]">
+                {getSectionConfig('competitive-edge-section').title}
+              </h2>
+            </div>
+            <div className="lg:col-span-7">
+              <p className="text-slate-600 text-xs sm:text-sm md:text-base leading-relaxed font-normal">
+                {getSectionConfig('competitive-edge-section').subtitle}
+              </p>
+            </div>
+          </div>
+
+          {/* Second Row: 3-column structured highlights */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+            
+            {/* Column 1: Why We Lead / Unrivaled GTM Intelligence */}
+            <div className="bg-slate-50/60 hover:bg-white border border-slate-200/60 hover:border-brand-200 p-6 md:p-8 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 group">
+              <div className="w-12 h-12 bg-amber-50 group-hover:bg-amber-100/80 rounded-xl flex items-center justify-center mb-6 transition-colors duration-200 border border-amber-100">
+                <Zap className="w-6 h-6 text-amber-500" />
+              </div>
+              <span className="text-[10px] text-amber-600 font-mono font-extrabold uppercase tracking-widest block mb-1">
+                Why We Lead
+              </span>
+              <h3 className="text-lg font-bold text-slate-850 text-slate-900 mb-3">
+                Unrivaled GTM Intelligence
+              </h3>
+              <p className="text-xs text-slate-500 leading-relaxed font-normal">
+                Access a comprehensive view of your market to understand exactly who your prospects are, what drives their needs, and the optimal moment to engage.
+              </p>
+            </div>
+
+            {/* Column 2: Engineered for Connectivity */}
+            <div className="bg-slate-50/60 hover:bg-white border border-slate-200/60 hover:border-brand-200 p-6 md:p-8 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 group">
+              <div className="w-12 h-12 bg-blue-50 group-hover:bg-blue-100/80 rounded-xl flex items-center justify-center mb-6 transition-colors duration-200 border border-blue-100">
+                <Network className="w-6 h-6 text-brand-500" />
+              </div>
+              <span className="text-[10px] text-brand-600 font-mono font-extrabold uppercase tracking-widest block mb-1">
+                Systems Architecture
+              </span>
+              <h3 className="text-lg font-bold text-slate-850 text-slate-900 mb-3">
+                Engineered for Connectivity
+              </h3>
+              <p className="text-xs text-slate-500 leading-relaxed font-normal">
+                Eliminate data silos by unifying your sales, marketing, and operations—creating a seamless flow of information across your entire tech stack.
+              </p>
+            </div>
+
+            {/* Column 3: AI-Driven Velocity */}
+            <div className="bg-slate-50/60 hover:bg-white border border-slate-200/60 hover:border-brand-200 p-6 md:p-8 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 group">
+              <div className="w-12 h-12 bg-purple-50 group-hover:bg-purple-100/80 rounded-xl flex items-center justify-center mb-6 transition-colors duration-200 border border-purple-100">
+                <Cpu className="w-6 h-6 text-purple-500" />
+              </div>
+              <span className="text-[10px] text-purple-600 font-mono font-extrabold uppercase tracking-widest block mb-1">
+                Optimized Output
+              </span>
+              <h3 className="text-lg font-bold text-slate-850 text-slate-900 mb-3">
+                AI-Driven Velocity
+              </h3>
+              <p className="text-xs text-slate-500 leading-relaxed font-normal">
+                Offload high-volume, repetitive tasks to our agent-ready systems, allowing your team to reclaim their time and focus on what matters most: closing deals and strengthening client relationships.
+              </p>
+            </div>
+
+          </div>
+
+        </div>
+      </section>
+      )}
+
+      {/* AI Agent Automated Lead Assembly Section */}
+      {getSectionConfig('ai-agents-section').isVisible && (
+      <section className="py-16 md:py-24 bg-gradient-to-b from-slate-100/30 to-white relative border-b border-slate-100" id="ai-agents-section">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          
+          <div className="text-center max-w-3xl mx-auto mb-10 md:mb-16 space-y-3">
+            <span className="bg-amber-100/60 text-amber-800 text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full border border-amber-200 inline-flex items-center gap-1 shadow-sm">
+              <Sparkles className="w-3 h-3 text-amber-500 animate-pulse" />
+              Automated AI Sourcing Agents
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-display font-bold text-slate-900 tracking-tight">
+              {getSectionConfig('ai-agents-section').title}
+            </h2>
+            <p className="text-slate-500 text-xs sm:text-sm md:text-base">
+              {getSectionConfig('ai-agents-section').subtitle}
+            </p>
+          </div>
+
+          {/* Core AIAgentBuilder block */}
+          <AIAgentBuilder />
+
+        </div>
+      </section>
+      )}
 
       {/* Main Interactive Segment: EstimatorWidget */}
+      {getSectionConfig('calculator-section').isVisible && (
       <section className="py-12 md:py-20 bg-white border-t border-b border-slate-100" id="calculator-section">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
@@ -402,10 +856,10 @@ export default function App() {
               Pricing Calculator
             </span>
             <h2 className="text-3xl sm:text-4xl font-display font-bold text-slate-900 tracking-tight">
-              Instant Database Match & Pricing Estimate
+              {getSectionConfig('calculator-section').title}
             </h2>
-            <p className="text-slate-500 text-sm md:text-base">
-              Establish your parameters below. Our database index counts will calculate matches instantly, letting you request custom samples with zero obligations.
+            <p className="text-slate-500 text-xs sm:text-sm md:text-base">
+              {getSectionConfig('calculator-section').subtitle}
             </p>
           </div>
 
@@ -413,8 +867,10 @@ export default function App() {
 
         </div>
       </section>
+      )}
 
       {/* Core B2B Services Suite */}
+      {getSectionConfig('core-services').isVisible && (
       <section className="py-16 md:py-24 bg-slate-50/70" id="core-services">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
@@ -423,11 +879,16 @@ export default function App() {
               Services Portfolio
             </span>
             <h2 className="text-3xl sm:text-4xl font-display font-bold text-slate-900 tracking-tight">
-              End-to-End B2B Data & Marketing Services
+              {getSectionConfig('core-services').title}
             </h2>
-            <p className="text-slate-500 text-sm md:text-base">
-              From fresh databases to complete client appointment acquisition. We cover every node of your sales outreach efforts.
+            <p className="text-slate-500 text-xs sm:text-sm md:text-base">
+              {getSectionConfig('core-services').subtitle}
             </p>
+          </div>
+
+          {/* Real-time Interactive Service Suggestions Optimizer */}
+          <div className="mb-16">
+            <ServiceOptimizer onNavigateService={(id) => setCurrentPage(id)} />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -471,8 +932,10 @@ export default function App() {
 
         </div>
       </section>
+      )}
 
       {/* Prospect Explorer Section */}
+      {getSectionConfig('prospect-explorer').isVisible && (
       <section className="py-16 md:py-24 bg-white border-t border-b border-slate-100" id="prospect-explorer">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
@@ -481,19 +944,61 @@ export default function App() {
               Database Transparency
             </span>
             <h2 className="text-3xl sm:text-4xl font-display font-bold text-slate-900 tracking-tight">
-              Inspect Our B2B Database Record Fields
+              {getSectionConfig('prospect-explorer').title}
             </h2>
-            <p className="text-slate-500 text-sm md:text-base">
-              Every profile delivered is packed with direct dials, verified company demographics, and verified email keys. Review actual format examples below.
+            <p className="text-slate-500 text-xs sm:text-sm md:text-base">
+              {getSectionConfig('prospect-explorer').subtitle}
             </p>
           </div>
 
           <RecordPreview onTriggerSample={scrolltoEstimator} />
 
+          {/* Real-time Email Verifier Interactive Sandbox */}
+          <div className="mt-16 border-t border-slate-100 pt-16">
+            <div className="text-center max-w-3xl mx-auto mb-10 space-y-3">
+              <span className="bg-brand-50 text-brand-700 text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full border border-brand-100">
+                Outbound Safeguard Analysis
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-display font-bold text-slate-900 tracking-tight">
+                Simulate a SMTP Handshake Live
+              </h2>
+              <p className="text-slate-500 text-xs sm:text-sm">
+                Experience the raw verification loop that powers our platform. Try random corporate addresses below to observe direct mail-exchanger checks and mailbox availability queries.
+              </p>
+            </div>
+            
+            <EmailVerifierWidget />
+          </div>
+
         </div>
       </section>
+      )}
+
+      {/* Global B2B Reach & Heatmap Visualizer */}
+      {getSectionConfig('database-footprint').isVisible && (
+      <section className="py-16 md:py-24 bg-slate-50 border-t border-b border-slate-100" id="database-footprint">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          
+          <div className="text-center max-w-3xl mx-auto mb-10 md:mb-16 space-y-3">
+            <span className="bg-brand-50 text-brand-700 text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full border border-brand-100">
+              Database Coverage
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-display font-bold text-slate-900 tracking-tight">
+              {getSectionConfig('database-footprint').title}
+            </h2>
+            <p className="text-slate-500 text-xs sm:text-sm md:text-base">
+              {getSectionConfig('database-footprint').subtitle}
+            </p>
+          </div>
+
+          <ActiveLeadsHeatmap />
+
+        </div>
+      </section>
+      )}
 
       {/* Live Messaging Outreach builder */}
+      {getSectionConfig('outbound-builder').isVisible && (
       <section className="py-16 md:py-24 bg-slate-950 relative overflow-hidden" id="outbound-builder">
         <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-brand-800/10 rounded-full blur-3xl pointer-events-none" />
         
@@ -507,10 +1012,10 @@ export default function App() {
                 Outreach Companion
               </span>
               <h2 className="text-3xl sm:text-4xl font-display font-medium leading-tight">
-                Instantly Generate Sales Sequences
+                {getSectionConfig('outbound-builder').title}
               </h2>
-              <p className="text-slate-400 text-sm leading-relaxed">
-                Connect the data you acquire directly to relevant outreach messaging models. Pick your core sales channel and objectives to copy pre-optimized frameworks instantly.
+              <p className="text-slate-400 text-xs sm:text-sm leading-relaxed font-sans">
+                {getSectionConfig('outbound-builder').subtitle}
               </p>
               
               <div className="space-y-4 pt-4 border-t border-white/5 text-xs text-slate-400">
@@ -538,8 +1043,10 @@ export default function App() {
 
         </div>
       </section>
+      )}
 
       {/* 4 Steps Timeline Flow */}
+      {getSectionConfig('workflow-steps').isVisible && (
       <section className="py-16 md:py-24 bg-white" id="workflow-steps">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
@@ -548,10 +1055,10 @@ export default function App() {
               Work Process
             </span>
             <h2 className="text-3xl sm:text-4xl font-display font-bold text-slate-900 tracking-tight">
-              From Custom Request to Campaign Success in 4 Steps
+              {getSectionConfig('workflow-steps').title}
             </h2>
-            <p className="text-slate-500 text-sm md:text-base">
-              A streamlined verification loop guarantees that you never waste outbound marketing budget on bounced email keys.
+            <p className="text-slate-500 text-xs sm:text-sm md:text-base">
+              {getSectionConfig('workflow-steps').subtitle}
             </p>
           </div>
 
@@ -607,6 +1114,7 @@ export default function App() {
 
         </div>
       </section>
+      )}
 
       {/* Grid Comparison Section */}
       <section className="py-16 md:py-24 bg-slate-50" id="competitive-matrix">
@@ -614,10 +1122,10 @@ export default function App() {
           
           <div className="text-center max-w-2xl mx-auto mb-12 md:mb-16 space-y-3">
             <h2 className="text-3xl font-display font-bold text-slate-900 tracking-tight">
-              Point to Business Services vs. Standard Data Providers
+              ZROLODEX.LIVE vs. Standard Data Providers
             </h2>
             <p className="text-slate-500 text-sm">
-              Why 2000+ top enterprises choose Point. Clean verification processes provide stellar delivery.
+              Why 2000+ top enterprises choose Zrolodex. Clean verification processes provide stellar delivery.
             </p>
           </div>
 
@@ -650,7 +1158,154 @@ export default function App() {
         </div>
       </section>
 
+      {/* CRM Sync Compatibility Segment */}
+      <section className="py-16 md:py-24 bg-white border-b border-slate-100" id="crm-compatibility">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          
+          <div className="text-center max-w-2xl mx-auto mb-12 md:mb-16 space-y-3">
+            <span className="bg-brand-50 text-brand-700 text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full border border-brand-100">
+              Direct Push Integrations
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-display font-bold text-slate-900 tracking-tight">
+              Enterprise CRM Sync Compatibility
+            </h2>
+            <p className="text-slate-500 text-sm md:text-base">
+              Say goodbye to manual scraping. Export and stream your triple-verified lists directly into your marketing workflows or CRM systems with 1-click mapping.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Salesforce Integration Card */}
+            <div className="bg-slate-50 border border-slate-200/60 rounded-3xl p-6 md:p-8 space-y-6 hover:shadow-xl hover:border-blue-200 transition duration-300 group">
+              <div className="flex items-center justify-between">
+                <div className="w-12 h-12 bg-blue-55 text-blue-600 bg-blue-50 rounded-2xl flex items-center justify-center border border-blue-100 shadow-sm">
+                  {/* Salesforce Custom Cloud SVG */}
+                  <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M19.1 10.3c-.2-.1-.4-.2-.6-.2h-.1c-1.1-2.4-3.5-3.9-6.1-3.6-2.1.2-3.9 1.5-4.7 3.4-.6-.4-1.3-.5-2-.4-1.7.3-3 1.8-3 3.5 0 2 1.6 3.6 3.6 3.6H19c1.7 0 3-1.4 3-3.1 0-1.8-1.3-3.1-2.9-3.2z" />
+                  </svg>
+                </div>
+                <span className="bg-blue-100/70 text-blue-700 font-mono text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded-md border border-blue-200">
+                  Native App
+                </span>
+              </div>
+              <div className="space-y-2">
+                <h4 className="text-lg font-bold text-slate-800 font-display group-hover:text-blue-600 transition">Salesforce Cloud Link</h4>
+                <p className="text-slate-500 text-xs leading-relaxed">
+                  Map leads instantly into custom campaign groups, assign directly to SDR owners, and audit duplicate indexes automatically prior to billing.
+                </p>
+              </div>
+              <div className="pt-4 border-t border-slate-200/50 flex items-center justify-between text-[11px] font-mono text-slate-500">
+                <span>Field Mapping</span>
+                <span className="text-emerald-600 font-bold flex items-center gap-1">
+                  <Check className="w-3.5 h-3.5" /> 32 Custom Fields
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-blue-600 font-bold">
+                <span>Configure sync parameters</span>
+                <ChevronRight className="w-4 h-4" />
+              </div>
+            </div>
+
+            {/* HubSpot Integration Card */}
+            <div className="bg-slate-50 border border-slate-200/60 rounded-3xl p-6 md:p-8 space-y-6 hover:shadow-xl hover:border-orange-200 transition duration-300 group">
+              <div className="flex items-center justify-between">
+                <div className="w-12 h-12 bg-orange-55 text-orange-600 bg-orange-50 rounded-2xl flex items-center justify-center border border-orange-100 shadow-sm">
+                  {/* HubSpot Sprocket SVG */}
+                  <svg viewBox="0 0 24 24" className="w-6 h-6 fill-none stroke-current stroke-[2.2]" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="7" r="2.5" />
+                    <circle cx="7" cy="15.5" r="2.5" />
+                    <circle cx="17" cy="15.5" r="2.5" />
+                    <line x1="12" y1="9.5" x2="12" y2="13.5" />
+                    <line x1="12" y1="13.5" x2="8.75" y2="13.5" />
+                    <line x1="12" y1="13.5" x2="15.25" y2="13.5" />
+                  </svg>
+                </div>
+                <span className="bg-orange-100/70 text-orange-700 font-mono text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded-md border border-orange-200">
+                  1-Click Auth
+                </span>
+              </div>
+              <div className="space-y-2">
+                <h4 className="text-lg font-bold text-slate-800 font-display group-hover:text-orange-600 transition">HubSpot CRM Setup</h4>
+                <p className="text-slate-500 text-xs leading-relaxed">
+                  Export verified contacts as marketing leads or full company objects with corporate domain association mapped instantly.
+                </p>
+              </div>
+              <div className="pt-4 border-t border-slate-200/50 flex items-center justify-between text-[11px] font-mono text-slate-500">
+                <span>Export Speed</span>
+                <span className="text-emerald-600 font-bold flex items-center gap-1">
+                  <Check className="w-3.5 h-3.5" /> Near Instantaneous
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-orange-600 font-bold">
+                <span>Initiate HubSpot link</span>
+                <ChevronRight className="w-4 h-4" />
+              </div>
+            </div>
+
+            {/* Pipedrive Integration Card */}
+            <div className="bg-slate-50 border border-slate-200/60 rounded-3xl p-6 md:p-8 space-y-6 hover:shadow-xl hover:border-emerald-200 transition duration-300 group">
+              <div className="flex items-center justify-between">
+                <div className="w-12 h-12 bg-emerald-55 text-emerald-600 bg-emerald-50 rounded-2xl flex items-center justify-center border border-emerald-100 shadow-sm">
+                  {/* Pipedrive Arrow SVG */}
+                  <svg viewBox="0 0 24 24" className="w-6 h-6 fill-none stroke-current stroke-[2.2]" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="4" y="4" width="6" height="5" rx="1" />
+                    <rect x="14" y="4" width="6" height="5" rx="1" />
+                    <rect x="4" y="15" width="6" height="5" rx="1" />
+                    <rect x="14" y="15" width="6" height="5" rx="1" />
+                    <path d="M10 6.5h4M10 17.5h4" />
+                  </svg>
+                </div>
+                <span className="bg-emerald-100/70 text-emerald-700 font-mono text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded-md border border-emerald-200">
+                  Ready API
+                </span>
+              </div>
+              <div className="space-y-2">
+                <h4 className="text-lg font-bold text-slate-800 font-display group-hover:text-emerald-600 transition">Pipedrive Pipelines</h4>
+                <p className="text-slate-500 text-xs leading-relaxed">
+                  Build custom deal pipelines populated with rich context. Automatically attach telephone, LinkedIn, region and sector details.
+                </p>
+              </div>
+              <div className="pt-4 border-t border-slate-200/50 flex items-center justify-between text-[11px] font-mono text-slate-500">
+                <span>Webhook Integration</span>
+                <span className="text-emerald-600 font-bold flex items-center gap-1">
+                  <Check className="w-3.5 h-3.5" /> Fully Supported
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-emerald-600 font-bold">
+                <span>Create pipeline mapping</span>
+                <ChevronRight className="w-4 h-4" />
+              </div>
+            </div>
+          </div>
+
+          {/* Quick-stats and list of supported minor platforms */}
+          <div className="mt-12 p-6 bg-slate-50/50 rounded-2xl border border-slate-200/40 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold">
+                <Database className="w-5 h-5 text-brand-450 text-brand-400" />
+              </div>
+              <div>
+                <h5 className="text-sm font-bold text-slate-800">Need another integration connector?</h5>
+                <p className="text-xs text-slate-500">
+                  We generate custom CSV exports fully structurally compatible with Apollo, Zoho, Outreach, and Microsoft Dynamics.
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex flex-wrap gap-2.5">
+              {['Zoho CRM', 'Apollo.io', 'Clay', 'Microsoft Dynamics', 'Zapier Connector', 'Webhook API'].map((item) => (
+                <span key={item} className="text-[10px] font-mono font-bold bg-white text-slate-600 border border-slate-200 px-2.5 py-1.5 rounded-lg shadow-sm">
+                  {item}
+                </span>
+              ))}
+            </div>
+          </div>
+
+        </div>
+      </section>
+
       {/* Client Evaluations */}
+      {getSectionConfig('client-evaluations').isVisible && (
       <section className="py-16 md:py-24 bg-white" id="client-evaluations">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
@@ -659,15 +1314,15 @@ export default function App() {
               User Testimonials
             </span>
             <h2 className="text-3xl sm:text-4xl font-display font-bold text-slate-900 tracking-tight">
-              Trusted by 2,000+ Global Marketing Teams
+              {getSectionConfig('client-evaluations').title}
             </h2>
             <p className="text-slate-550 text-slate-500 text-sm">
-              See how modern SDRs, demand planners, and agency executives scale up outreach ROI.
+              {getSectionConfig('client-evaluations').subtitle}
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {TESTIMONIALS.map((test) => (
+            {storiesState.map((test) => (
               <div 
                 key={test.id} 
                 className="bg-slate-50 rounded-2xl p-6 md:p-8 border border-slate-100 flex flex-col justify-between hover:translate-y-[-2px] transition duration-200"
@@ -700,8 +1355,10 @@ export default function App() {
 
         </div>
       </section>
+      )}
 
       {/* Accordion FAQ Section */}
+      {getSectionConfig('faq').isVisible && (
       <section className="py-16 md:py-24 bg-slate-50/70" id="faq">
         <div className="max-w-4xl mx-auto px-4 sm:px-6">
           
@@ -710,51 +1367,178 @@ export default function App() {
               Got Questions?
             </span>
             <h2 className="text-3xl font-display font-bold text-slate-900 tracking-tight">
-              Frequently Asked Questions
+              {getSectionConfig('faq').title}
             </h2>
             <p className="text-slate-500 text-xs sm:text-sm">
-              Still feeling curious about B2B records? We compiled typical client inquiries below.
+              {getSectionConfig('faq').subtitle}
             </p>
           </div>
 
-          <div className="space-y-3" id="faq-accordions">
-            {FAQS.map((faq) => {
-              const isOpen = activeFAQ === faq.id;
-              return (
-                <div 
-                  key={faq.id}
-                  className="bg-white rounded-2xl border border-slate-100 overflow-hidden transition"
+          {/* FAQ Filter Tools */}
+          <div className="max-w-xl mx-auto mb-10 space-y-4">
+            {/* Search input bar */}
+            <div className="relative">
+              <span className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <Search className="h-4 w-4 text-slate-400" />
+              </span>
+              <input
+                type="text"
+                placeholder="Search FAQ by keywords (e.g., accuracy, GDPR, email)..."
+                value={faqSearchQuery}
+                onChange={(e) => setFaqSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-10 py-2.5 text-xs sm:text-sm rounded-2xl bg-white border border-slate-200/80 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/15 focus:outline-none placeholder-slate-400 text-slate-800 transition shadow-sm font-sans"
+              />
+              {faqSearchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setFaqSearchQuery('')}
+                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600 transition cursor-pointer"
+                  title="Clear search"
                 >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+
+            {/* Keyword Chip Selector Buttons */}
+            <div className="flex flex-wrap gap-1.5 justify-center">
+              {[
+                { id: 'all', label: 'All Queries' },
+                { id: 'accuracy', label: 'Accuracy & Quality' },
+                { id: 'compliance', label: 'GDPR & Compliance' },
+                { id: 'delivery', label: 'Delivery Time' },
+                { id: 'samples', label: 'Free Samples' },
+              ].map((category) => {
+                const isActive = faqSelectedCategory === category.id;
+                return (
                   <button
-                    onClick={() => setActiveFAQ(isOpen ? null : faq.id)}
-                    className="w-full text-left py-4.5 px-6 flex items-center justify-between font-semibold font-display text-slate-800 text-sm md:text-base cursor-pointer hover:bg-slate-50/50 transition gap-4"
+                    key={category.id}
+                    type="button"
+                    onClick={() => setFaqSelectedCategory(category.id)}
+                    className={`px-3 py-1 rounded-full text-[11px] font-semibold cursor-pointer transition border ${
+                      isActive
+                        ? 'bg-brand-600 text-white border-brand-600 shadow-sm'
+                        : 'bg-white text-slate-600 border-slate-200/80 hover:bg-slate-100 hover:text-slate-800'
+                    }`}
                   >
-                    <span>{faq.question}</span>
-                    <ChevronDown className={`w-4 h-4 text-slate-400 flex-shrink-0 transition duration-200 ${isOpen ? 'rotate-180 text-brand-600' : ''}`} />
+                    {category.label}
                   </button>
-                  <AnimatePresence initial={false}>
-                    {isOpen && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.18 }}
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="space-y-3 animate-fade-in" id="faq-accordions">
+            {(() => {
+              const filtered = FAQS.filter((faq) => {
+                const matchesQuery =
+                  faq.question.toLowerCase().includes(faqSearchQuery.toLowerCase()) ||
+                  faq.answer.toLowerCase().includes(faqSearchQuery.toLowerCase());
+                if (!matchesQuery) return false;
+
+                if (faqSelectedCategory === 'all') return true;
+                if (faqSelectedCategory === 'accuracy' && (faq.id === 'f-1' || faq.id === 'f-5')) return true;
+                if (faqSelectedCategory === 'compliance' && faq.id === 'f-2') return true;
+                if (faqSelectedCategory === 'delivery' && faq.id === 'f-3') return true;
+                if (faqSelectedCategory === 'samples' && faq.id === 'f-4') return true;
+
+                return false;
+              });
+
+              if (filtered.length === 0) {
+                return (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-center py-10 px-6 bg-white rounded-2xl border border-slate-200/60 max-w-sm mx-auto space-y-4 shadow-sm"
+                  >
+                    <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center mx-auto text-slate-400">
+                      <HelpCircle className="w-5 h-5" />
+                    </div>
+                    <div className="space-y-1">
+                      <h4 className="font-bold text-slate-800 text-xs">No Matches Found</h4>
+                      <p className="text-slate-500 text-[11px] leading-relaxed max-w-xs mx-auto">
+                        We couldn't find matches for "{faqSearchQuery}" in this context. Try typing another term or reset.
+                      </p>
+                    </div>
+                    <div className="flex gap-2 justify-center">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFaqSearchQuery('');
+                          setFaqSelectedCategory('all');
+                        }}
+                        className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-bold rounded-xl transition cursor-pointer"
                       >
-                        <div className="p-6 pt-0 text-xs sm:text-sm text-slate-500 leading-relaxed border-t border-slate-50">
-                          {faq.answer}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              );
-            })}
+                        Reset All Filters
+                      </button>
+                    </div>
+                  </motion.div>
+                );
+              }
+
+              return filtered.map((faq) => {
+                const isOpen = activeFAQ === faq.id;
+                return (
+                  <div 
+                    key={faq.id}
+                    className="bg-white rounded-2xl border border-slate-150/80 overflow-hidden transition-all duration-200 hover:shadow-sm"
+                  >
+                    <button
+                      onClick={() => setActiveFAQ(isOpen ? null : faq.id)}
+                      className="w-full text-left py-4.5 px-6 flex items-center justify-between font-semibold font-display text-slate-800 text-sm md:text-base cursor-pointer hover:bg-slate-50/50 transition gap-4"
+                    >
+                      <span className="leading-snug">{faq.question}</span>
+                      <ChevronDown className={`w-4 h-4 text-slate-400 flex-shrink-0 transition duration-200 ${isOpen ? 'rotate-180 text-brand-600' : ''}`} />
+                    </button>
+                    <AnimatePresence initial={false}>
+                      {isOpen && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.18 }}
+                        >
+                          <div className="p-6 pt-0 text-xs sm:text-sm text-slate-500 leading-relaxed border-t border-slate-50">
+                            {faq.answer}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                );
+              });
+            })()}
           </div>
 
         </div>
       </section>
+      )}
+
+      {/* Custom Section Blocks added dynamically via Admin Panel */}
+      {sectionsState
+        .filter(sec => sec.isVisible && !DEFAULT_SECTIONS.some(deflt => deflt.id === sec.id))
+        .map(sec => (
+          <section key={sec.id} className="py-16 md:py-24 bg-gradient-to-r from-slate-900 to-brand-950 text-white relative border-b border-brand-900 overflow-hidden" id={sec.id}>
+            <div className="absolute inset-0 bg-grid-pattern opacity-10 pointer-events-none" />
+            <div className="max-w-4xl mx-auto px-4 text-center space-y-6 relative z-10">
+              <span className="bg-amber-500/10 text-amber-400 text-[10px] font-mono font-extrabold pb-0.5 uppercase px-3 py-1 rounded-full border border-amber-500/20 inline-block">
+                Custom Page Block: #{sec.id}
+              </span>
+              <h2 className="text-3xl sm:text-4xl font-display font-medium text-white tracking-tight">
+                {sec.title}
+              </h2>
+              {sec.subtitle && (
+                <p className="text-slate-300 text-xs sm:text-sm md:text-base leading-relaxed max-w-2xl mx-auto font-sans">
+                  {sec.subtitle}
+                </p>
+              )}
+            </div>
+          </section>
+        ))}
 
       {/* Quote Request Form block */}
+      {getSectionConfig('contact-section').isVisible && (
       <section className="py-16 md:py-24 bg-white" id="contact-section">
         <div className="max-w-4xl mx-auto px-4 sm:px-6">
           
@@ -769,17 +1553,17 @@ export default function App() {
                     Fast Turnaround
                   </span>
                   <h3 className="text-2xl md:text-3xl font-display font-medium text-white tracking-tight mt-4">
-                    Get a Custom Quote in 24 Hours
+                    {getSectionConfig('contact-section').title}
                   </h3>
                 </div>
-                <p className="text-slate-300 text-xs leading-relaxed">
-                  Have very specific target needs? (e.g., HVAC technicians in Germany, Dental clinic administrators in NY). Submit specifications and our engineers will calculate a custom query.
+                <p className="text-slate-300 text-xs leading-relaxed font-sans">
+                  {getSectionConfig('contact-section').subtitle}
                 </p>
 
                 <div className="space-y-3.5 text-xs text-slate-300 pt-4 border-t border-white/5">
                   <div className="flex items-center gap-2.5">
                     <Mail className="w-4 h-4 text-teal-400" />
-                    <span>info@pointtobusinessservices.com</span>
+                    <span>contact@zrolodex.live</span>
                   </div>
                   <div className="flex items-center gap-2.5">
                     <CheckCircle2 className="w-4 h-4 text-teal-400" />
@@ -967,6 +1751,37 @@ export default function App() {
 
         </div>
       </section>
+      )}
+
+        </>
+      ) : currentPage === 'admin' ? (
+        <AdminPanel 
+          onClose={() => setCurrentPage('home')}
+          sections={sectionsState}
+          onUpdateSections={(newSecs) => {
+            setSectionsState(newSecs);
+            try {
+              localStorage.setItem('zrolodex_admin_sections', JSON.stringify(newSecs));
+            } catch(e) { console.error(e); }
+          }}
+          stories={storiesState}
+          onUpdateStories={(newStories) => {
+            setStoriesState(newStories);
+            try {
+              localStorage.setItem('zrolodex_admin_stories', JSON.stringify(newStories));
+            } catch(e) { console.error(e); }
+          }}
+          siteTitle={siteTitleState}
+          onUpdateSiteTitle={(newTitle) => {
+            setSiteTitleState(newTitle);
+            try {
+              localStorage.setItem('zrolodex_admin_siteTitle', newTitle);
+            } catch(e) { console.error(e); }
+          }}
+        />
+      ) : (
+        <ServicePages initialTab={currentPage as any} onBackToHome={() => setCurrentPage('home')} />
+      )}
 
       {/* Corporate footer */}
       <footer className="bg-slate-900 text-slate-400 py-12 border-t border-slate-800">
@@ -977,12 +1792,12 @@ export default function App() {
               <div className="bg-brand-700 text-white w-8 h-8 rounded-lg flex items-center justify-center">
                 <Target className="w-4 h-4" />
               </div>
-              <span className="font-display font-medium text-white text-lg tracking-tight">
-                Point <span className="text-brand-500">To Business</span> Services
+              <span className="font-display font-black text-white text-lg tracking-tight uppercase">
+                {siteTitleState}
               </span>
             </div>
             <p className="text-slate-400 leading-relaxed max-w-sm">
-              Point to Business Services is a premier global provider of accurate B2B contact lists, lead generation strategy, database auditing, and custom outbound campaigns since 2014.
+              {siteTitleState} is a premier global provider of accurate B2B contact lists, lead generation strategy, database auditing, and custom outbound campaigns since 2014.
             </p>
             
             {/* Badges of compliance */}
@@ -1013,7 +1828,7 @@ export default function App() {
             <ul className="space-y-2 leading-relaxed">
               <li className="flex items-start gap-1.5 text-slate-300">
                 <Mail className="w-4 h-4 text-brand-500 flex-shrink-0 mt-0.5" />
-                <span>Email: <a href="mailto:info@pointtobusinessservices.com" className="hover:underline text-white">info@pointtobusinessservices.com</a></span>
+                <span>Email: <a href="mailto:contact@zrolodex.live" className="hover:underline text-white">contact@zrolodex.live</a></span>
               </li>
               <li>Office Hours: Mon-Fri | 9:00 AM - 6:00 PM EST</li>
               <li className="pt-2 border-t border-slate-800 text-[11px] text-slate-500 font-mono">
@@ -1025,7 +1840,7 @@ export default function App() {
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 pt-8 border-t border-slate-800 text-center text-slate-500 text-[11px] flex flex-col sm:flex-row justify-between items-center gap-4">
-          <p>© {new Date().getFullYear()} Point to Business Services. All rights reserved. Registered business database index provider.</p>
+          <p>© {new Date().getFullYear()} Zrolodex.live. All rights reserved. Registered business database index provider.</p>
           <div className="flex gap-4">
             <a href="#" className="hover:text-slate-300 transition">Privacy Policy</a>
             <span>•</span>
@@ -1035,6 +1850,40 @@ export default function App() {
           </div>
         </div>
       </footer>
+
+      {/* Interactive Guided Tour Overlay */}
+      <AnimatePresence>
+        {tourActive && (
+          <GuidedTour 
+            onClose={handleCloseTour} 
+            onSelectPage={setCurrentPage} 
+            onFinishSetup={handleFinishSetupFromTour}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Floating Tour Launcher */}
+      {currentPage === 'home' && !tourActive && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8, y: 10 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ delay: 3, duration: 0.3 }}
+          className="fixed bottom-6 left-6 z-[90] hidden sm:block"
+        >
+          <button
+            onClick={() => setTourActive(true)}
+            className="bg-slate-900 hover:bg-slate-850 text-white font-bold text-xs px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2 transition hover:-translate-y-0.5 border border-white/10 cursor-pointer select-none group"
+            title="Launch Dashboard Tour"
+          >
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+            </span>
+            <Sparkles className="w-4 h-4 text-amber-400 group-hover:rotate-12 transition-transform duration-250" />
+            <span>Interactive Guide</span>
+          </button>
+        </motion.div>
+      )}
 
     </div>
   );

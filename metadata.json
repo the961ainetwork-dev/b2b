@@ -1,6 +1,6 @@
 {
-  "name": "Point to Business Services",
-  "description": "High-accuracy B2B email lists, lead generation services, and database counts with an interactive target estimator.",
+  "name": "Zrolodex.live",
+  "description": "ZROLODEX.LIVE delivers high-accuracy B2B lead generation, triple-verified contact databases, custom email auditing, and real-time list estimation.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
