@@ -21,7 +21,8 @@ import {
   Search,
   MessageSquare,
   Activity,
-  Award
+  Award,
+  Download
 } from 'lucide-react';
 import { TestimonialItem } from '../types';
 
@@ -61,6 +62,35 @@ export default function AdminPanel({
   
   // Alert banner states
   const [saveBanner, setSaveBanner] = useState<string | null>(null);
+
+  const handleExportCMS = () => {
+    try {
+      const configPayload = {
+        siteTitle,
+        sections,
+        stories,
+        timestamp: new Date().toISOString(),
+        environment: "Zrolodex CMS Engine"
+      };
+      
+      const fileContent = JSON.stringify(configPayload, null, 2);
+      const blob = new Blob([fileContent], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const formattedTitle = siteTitle.trim().toLowerCase().replace(/[^a-z0-9]/g, '_') || 'zrolodex_cms';
+      a.download = `cms_config_${formattedTitle}_backup.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      triggerBanner("CMS configuration exported successfully! Check your downloads.");
+    } catch (err) {
+      console.error("Export failure", err);
+      triggerBanner("Error: Could not compiled or initiate JSON download.");
+    }
+  };
 
   // States for creating a story
   const [storyName, setStoryName] = useState('');
@@ -217,13 +247,26 @@ export default function AdminPanel({
           </div>
         </div>
 
-        <button 
-          onClick={onClose}
-          className="bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 text-slate-100 font-bold text-sm px-4 py-2 rounded-xl transition cursor-pointer select-none"
-          id="exit-admin-sandbox"
-        >
-          Return to App Homepage
-        </button>
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={handleExportCMS}
+            className="bg-indigo-600 hover:bg-indigo-750 border border-indigo-500 hover:border-indigo-400 text-white font-extrabold text-xs px-4 py-2 rounded-xl transition cursor-pointer select-none flex items-center gap-1.5 shadow-lg shadow-indigo-600/10"
+            id="export-cms-configs-btn"
+            title="Download modern JSON backup of all sections and user stories"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Export CMS Configurations</span>
+            <span className="sm:hidden">Export CMS</span>
+          </button>
+
+          <button 
+            onClick={onClose}
+            className="bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-slate-600 text-slate-100 font-bold text-xs px-4 py-2 rounded-xl transition cursor-pointer select-none"
+            id="exit-admin-sandbox"
+          >
+            Return to App Homepage
+          </button>
+        </div>
       </nav>
 
       {/* Real-time sync notifications alert bar */}
@@ -763,6 +806,33 @@ export default function AdminPanel({
                         <div>CRM Endpoints: <strong className="text-white">DNC Active check</strong></div>
                         <div>Primary Index scope: <strong className="text-white">7.2M Active corporate rows</strong></div>
                         <div>API Handshake key: <strong className="text-white">System AES-256</strong></div>
+                      </div>
+                    </div>
+
+                    {/* Backup & Export segment */}
+                    <div className="bg-slate-950 border border-slate-850 p-5 rounded-2xl space-y-3" id="cms-backup-settings-card">
+                      <div>
+                        <span className="font-mono text-[11px] font-extrabold text-indigo-400 uppercase block tracking-wider">
+                          Configuration Backup &amp; Portability
+                        </span>
+                        <h4 className="text-sm font-bold text-slate-200 mt-1">
+                          Export Layout Configurations
+                        </h4>
+                        <p className="text-xs text-slate-400 leading-relaxed mt-1">
+                          Compile your configured homepage layouts, metadata, custom titles, reordered hierarchies, and active success stories into a standardized JSON schema file. Use this file to migrate settings or preserve backups.
+                        </p>
+                      </div>
+
+                      <div className="pt-2 flex">
+                        <button
+                          type="button"
+                          onClick={handleExportCMS}
+                          className="bg-indigo-600 hover:bg-indigo-750 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl transition flex items-center gap-2 cursor-pointer shadow-lg shadow-indigo-600/10 hover:scale-[1.02] active:scale-95 duration-150"
+                          id="export-cms-branding-tab-btn"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          <span>Export Configs Payload (.json)</span>
+                        </button>
                       </div>
                     </div>
 

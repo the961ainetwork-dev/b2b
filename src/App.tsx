@@ -30,7 +30,10 @@ import {
   X,
   AlertCircle,
   Search,
-  Shield
+  Shield,
+  LogOut,
+  LogIn,
+  UserPlus
 } from 'lucide-react';
 import { SERVICES, TESTIMONIALS, FAQS, COMPETITIVE_MATRIX } from './data';
 import type { TestimonialItem } from './types';
@@ -46,6 +49,7 @@ import LiveActivityTicker from './components/LiveActivityTicker';
 import EmailVerifierWidget from './components/EmailVerifierWidget';
 import AdminPanel from './components/AdminPanel';
 import type { AdminSectionConfig } from './components/AdminPanel';
+import AuthModal from './components/AuthModal';
 
 const DEFAULT_SECTIONS: AdminSectionConfig[] = [
   { id: 'hero-section', name: 'Hero Header Panel', title: 'Power Your Outbound with Localized B2B Contact Leads', subtitle: 'Access manual triple-verified business profiles & custom cold outreach data sequences matching your ideal client target persona.', isVisible: true, order: 1 },
@@ -97,6 +101,41 @@ export default function App() {
   const [sectionsState, setSectionsState] = useState<AdminSectionConfig[]>(getInitialSections);
   const [storiesState, setStoriesState] = useState<TestimonialItem[]>(getInitialStories);
   const [siteTitleState, setSiteTitleState] = useState<string>(getInitialSiteTitle);
+
+  // Authentication States
+  const [user, setUser] = useState<{ email: string; name: string; isAdmin: boolean } | null>(() => {
+    try {
+      const saved = localStorage.getItem('zrolodex_current_user');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.warn(e);
+    }
+    return null;
+  });
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<'signin' | 'signup'>('signin');
+
+  const handleLoginSuccess = (email: string, name: string, isAdmin: boolean) => {
+    const loggedUser = { email, name, isAdmin };
+    setUser(loggedUser);
+    try {
+      localStorage.setItem('zrolodex_current_user', JSON.stringify(loggedUser));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    try {
+      localStorage.removeItem('zrolodex_current_user');
+    } catch (e) {
+      console.error(e);
+    }
+    if (currentPage === 'admin') {
+      setCurrentPage('home');
+    }
+  };
 
   const getSectionConfig = (id: string): { isVisible: boolean; title: string; subtitle: string; } => {
     const config = sectionsState.find(s => s.id === id);
@@ -515,30 +554,97 @@ export default function App() {
 
           {/* Desktop Call to Actions */}
           <div className="hidden md:flex items-center gap-3">
-            <a 
-              href="mailto:contact@zrolodex.live" 
-              className="text-xs font-mono font-bold text-slate-500 hover:text-brand-600 transition flex items-center gap-1"
-            >
-              <Mail className="w-3.5 h-3.5" />
-              contact@zrolodex.live
-            </a>
-            
             <button 
               onClick={startGuidedTour}
-              className="bg-amber-500 hover:bg-amber-600 border border-amber-500 text-slate-950 font-bold text-xs px-4 py-2.5 rounded-xl transition duration-150 cursor-pointer shadow-md shadow-brand-500/10 flex items-center gap-1"
+              className="bg-blue-50 hover:bg-blue-100/80 border border-blue-200 text-slate-700 font-extrabold text-xs px-3.5 py-2 rounded-xl transition duration-150 cursor-pointer flex items-center gap-1"
             >
-              <Sparkles className="w-3.5 h-3.5 text-slate-950 animate-pulse" />
-              Get Started Tour
+              <Sparkles className="w-3.5 h-3.5 text-blue-600 animate-pulse" />
+              <span>Tour</span>
             </button>
 
-            <button 
-              onClick={() => setCurrentPage('admin')}
-              className="bg-slate-900 hover:bg-slate-800 border border-slate-800 text-amber-400 hover:text-amber-300 font-bold text-xs px-4 py-2.5 rounded-xl transition duration-150 cursor-pointer flex items-center gap-1.5 shadow-sm"
-              title="Open Admin CMS Console"
-            >
-              <Shield className="w-3.5 h-3.5 text-amber-500" />
-              <span>Admin Portal</span>
-            </button>
+            {user ? (
+              <div className="flex items-center gap-2 bg-slate-50 border border-slate-250 p-1 rounded-xl text-xs font-semibold">
+                <div className="flex items-center gap-1.5 pl-2">
+                  <div className="w-5.5 h-5.5 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center font-bold text-[10px] shrink-0 uppercase ring-1 ring-brand-300">
+                    {user.name.charAt(0)}
+                  </div>
+                  <div className="leading-tight text-left">
+                    <span className="block text-slate-850 font-extrabold max-w-[85px] truncate">{user.name}</span>
+                    <span className="block text-[8px] text-brand-600 font-mono font-bold -mt-0.5">
+                      {user.isAdmin ? '👑 ADMIN' : 'MEMBER'}
+                    </span>
+                  </div>
+                </div>
+                
+                {/* Separator */}
+                <span className="h-6 w-px bg-slate-300 mx-1" />
+
+                <button
+                  onClick={() => setCurrentPage('admin')}
+                  className={`px-3 py-1.5 rounded-lg text-[10.5px] font-extrabold cursor-pointer transition flex items-center gap-1.5 ${
+                    currentPage === 'admin' 
+                      ? 'bg-amber-500 text-slate-950' 
+                      : 'bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200/50'
+                  }`}
+                  id="nav-admin-portal-active-btn"
+                >
+                  <Shield className="w-3.5 h-3.5 text-amber-600" />
+                  <span>CMS (/admin)</span>
+                </button>
+
+                <button
+                  onClick={handleLogout}
+                  className="p-1.5 text-slate-400 hover:text-red-650 rounded-lg hover:bg-red-50 transition cursor-pointer"
+                  title="Sign Out of Session"
+                  id="nav-sign-out-btn"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                {/* Sign In Trigger */}
+                <button
+                  onClick={() => {
+                    setAuthModalMode('signin');
+                    setAuthModalOpen(true);
+                  }}
+                  className="hover:bg-slate-50 border border-slate-205 text-slate-700 hover:text-slate-950 font-extrabold text-xs px-3.5 py-2 rounded-xl transition cursor-pointer flex items-center gap-1"
+                  id="nav-signin-btn"
+                >
+                  <LogIn className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Sign In</span>
+                </button>
+
+                {/* Sign Up Trigger */}
+                <button
+                  onClick={() => {
+                    setAuthModalMode('signup');
+                    setAuthModalOpen(true);
+                  }}
+                  className="bg-indigo-650 hover:bg-indigo-750 text-white font-extrabold text-xs px-3.5 py-2 rounded-xl transition shadow-md shadow-indigo-600/10 cursor-pointer flex items-center gap-1"
+                  id="nav-signup-sidebar-btn"
+                >
+                  <UserPlus className="w-3.5 h-3.5 text-indigo-200" />
+                  <span>Sign Up</span>
+                </button>
+
+                {/* Highlighted admin console option */}
+                <button 
+                  onClick={() => setCurrentPage('admin')}
+                  className={`border font-extrabold text-xs px-3.5 py-2 rounded-xl transition duration-150 cursor-pointer flex items-center gap-1 shadow-sm ${
+                    currentPage === 'admin'
+                      ? 'bg-amber-500 text-slate-950 border-amber-500'
+                      : 'bg-slate-900 hover:bg-slate-950 text-amber-400 border-amber-500/50 hover:border-amber-500 hover:shadow-md hover:shadow-amber-500/10'
+                  }`}
+                  title="Admin Portal Console"
+                  id="nav-admin-secure-gate-btn"
+                >
+                  <Shield className="w-3.5 h-3.5 text-amber-400" />
+                  <span>CMS (/admin)</span>
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Mobile menu burger */}
@@ -608,14 +714,70 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="pt-2 flex flex-col gap-2 border-t border-slate-100">
-                <button
-                  onClick={() => { setCurrentPage('admin'); setMobileMenuOpen(false); }}
-                  className="w-full py-2.5 px-3 bg-slate-900 border border-slate-800 text-amber-500 font-bold rounded-xl flex items-center justify-center gap-2 text-xs cursor-pointer"
-                >
-                  <Shield className="w-4 h-4 text-amber-500" />
-                  <span>Administrative CMS (/admin)</span>
-                </button>
+              <div className="pt-2.5 flex flex-col gap-2.5 border-t border-slate-100">
+                {user ? (
+                  <div className="space-y-3 bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center font-bold text-xs uppercase shrink-0">
+                        {user.name.charAt(0)}
+                      </div>
+                      <div className="text-left">
+                        <span className="block text-slate-850 font-extrabold text-xs">{user.name}</span>
+                        <span className="block text-[9px] text-brand-600 font-mono font-bold -mt-0.5">
+                          {user.isAdmin ? '👑 ADMINISTRATOR MEMBER' : 'STANDARD WORKSPACE MEMBER'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      {user.isAdmin && (
+                        <button
+                          onClick={() => { setCurrentPage('admin'); setMobileMenuOpen(false); }}
+                          className="col-span-1 py-2 px-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-[11px] rounded-xl flex items-center justify-center gap-1 transition"
+                        >
+                          <Shield className="w-3.5 h-3.5" />
+                          <span>Admin Portal</span>
+                        </button>
+                      )}
+                      <button
+                        onClick={() => { handleLogout(); setMobileMenuOpen(false); }}
+                        className={`${user.isAdmin ? 'col-span-1' : 'col-span-2'} py-2 px-2.5 bg-red-50 hover:bg-red-100 text-red-700 font-bold text-[11px] border border-red-200 rounded-xl flex items-center justify-center gap-1 transition`}
+                      >
+                        <LogOut className="w-3.5 h-3.5" />
+                        <span>Sign Out</span>
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => { setAuthModalMode('signin'); setAuthModalOpen(true); setMobileMenuOpen(false); }}
+                        className="py-2.5 px-3 bg-slate-50 border border-slate-250 text-slate-700 hover:text-slate-950 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition"
+                      >
+                        <LogIn className="w-4 h-4 text-indigo-600" />
+                        <span>Sign In</span>
+                      </button>
+
+                      <button
+                        onClick={() => { setAuthModalMode('signup'); setAuthModalOpen(true); setMobileMenuOpen(false); }}
+                        className="py-2.5 px-3 bg-indigo-650 hover:bg-indigo-750 text-white font-extrabold text-xs rounded-xl flex items-center justify-center gap-1.5 transition whitespace-nowrap"
+                      >
+                        <UserPlus className="w-4 h-4 text-indigo-400" />
+                        <span>Sign Up</span>
+                      </button>
+                    </div>
+
+                    <button
+                      onClick={() => { setCurrentPage('admin'); setMobileMenuOpen(false); }}
+                      className="w-full py-2.5 px-3 bg-slate-900 hover:bg-slate-950 border border-slate-800 text-amber-400 hover:text-amber-350 font-bold rounded-xl flex items-center justify-center gap-2 text-xs transition cursor-pointer shadow-md shadow-amber-500/5 hover:border-amber-500"
+                    >
+                      <Shield className="w-4 h-4 text-amber-500" />
+                      <span>Administrative CMS (/admin)</span>
+                    </button>
+                  </div>
+                )}
+                
                 <a href="mailto:contact@zrolodex.live" className="text-xs text-slate-500 font-mono flex items-center gap-1.5 py-1 justify-center mt-1">
                   <Mail className="w-4 h-4" />
                   contact@zrolodex.live
@@ -1666,30 +1828,95 @@ export default function App() {
           )}
         </div>
       ) : currentPage === 'admin' ? (
-        <AdminPanel 
-          onClose={() => setCurrentPage('home')}
-          sections={sectionsState}
-          onUpdateSections={(newSecs) => {
-            setSectionsState(newSecs);
-            try {
-              localStorage.setItem('zrolodex_admin_sections', JSON.stringify(newSecs));
-            } catch(e) { console.error(e); }
-          }}
-          stories={storiesState}
-          onUpdateStories={(newStories) => {
-            setStoriesState(newStories);
-            try {
-              localStorage.setItem('zrolodex_admin_stories', JSON.stringify(newStories));
-            } catch(e) { console.error(e); }
-          }}
-          siteTitle={siteTitleState}
-          onUpdateSiteTitle={(newTitle) => {
-            setSiteTitleState(newTitle);
-            try {
-              localStorage.setItem('zrolodex_admin_siteTitle', newTitle);
-            } catch(e) { console.error(e); }
-          }}
-        />
+        user?.isAdmin ? (
+          <AdminPanel 
+            onClose={() => setCurrentPage('home')}
+            sections={sectionsState}
+            onUpdateSections={(newSecs) => {
+              setSectionsState(newSecs);
+              try {
+                localStorage.setItem('zrolodex_admin_sections', JSON.stringify(newSecs));
+              } catch(e) { console.error(e); }
+            }}
+            stories={storiesState}
+            onUpdateStories={(newStories) => {
+              setStoriesState(newStories);
+              try {
+                localStorage.setItem('zrolodex_admin_stories', JSON.stringify(newStories));
+              } catch(e) { console.error(e); }
+            }}
+            siteTitle={siteTitleState}
+            onUpdateSiteTitle={(newTitle) => {
+              setSiteTitleState(newTitle);
+              try {
+                localStorage.setItem('zrolodex_admin_siteTitle', newTitle);
+              } catch(e) { console.error(e); }
+            }}
+          />
+        ) : (
+          <div className="py-20 md:py-32 bg-slate-950 text-white min-h-[80vh] flex items-center justify-center relative overflow-hidden" id="admin-locked-screen">
+            <div className="absolute inset-0 bg-grid-pattern opacity-[0.02]" />
+            <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-brand-500/10 rounded-full blur-3xl pointer-events-none" />
+            
+            <div className="max-w-md w-full mx-auto px-6 relative z-10 text-center space-y-6">
+              <div className="mx-auto w-16 h-16 bg-slate-900 border border-slate-800 rounded-2xl flex items-center justify-center text-amber-500 shadow-xl shadow-amber-500/10">
+                <Shield className="w-8 h-8 animate-pulse text-amber-400" />
+              </div>
+              
+              <div className="space-y-1">
+                <div className="inline-flex items-center gap-1.5 bg-red-950/40 border border-red-900/50 rounded-full px-3 py-1 text-xs text-red-400 font-mono font-bold uppercase tracking-wide">
+                  <AlertCircle className="w-3.5 h-3.5" />
+                  <span>Access Restricted (/admin)</span>
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-display font-bold tracking-tight text-white mt-2">
+                  Administrative CMS Locked
+                </h1>
+                <p className="text-xs text-slate-400 leading-relaxed font-sans max-w-sm mx-auto">
+                  The requested administrative content engine is locked. Please authenticate with an Administrator handle to tweak homepage layout components and published customer stories live.
+                </p>
+              </div>
+
+              {/* Box showing credentials of sandbox */}
+              <div className="bg-slate-900/90 border border-slate-800/80 rounded-2xl p-4 text-xs space-y-2 text-left font-sans">
+                <span className="font-mono text-[9px] text-amber-500 font-extrabold uppercase block tracking-wider">
+                  Demohost Sandbox Credentials
+                </span>
+                <p className="text-slate-400">
+                  You can bypass this warning instantly using our preloaded credentials:
+                </p>
+                <div className="grid grid-cols-2 gap-2 text-[11px] font-mono select-all bg-slate-950/60 p-2.5 rounded-xl border border-slate-850">
+                  <div>Email: <strong className="text-slate-200">admin@zrolodex.live</strong></div>
+                  <div>Password: <strong className="text-slate-205 text-slate-200">admin</strong></div>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2.5 pt-2">
+                <button
+                  onClick={() => {
+                    setAuthModalMode('signin');
+                    setAuthModalOpen(true);
+                  }}
+                  className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-xs py-3.5 rounded-xl transition duration-150 cursor-pointer shadow-lg shadow-amber-500/10 flex items-center justify-center gap-1.5"
+                  id="admin-unlock-signin-btn"
+                >
+                  <LogIn className="w-4 h-4 text-slate-950" />
+                  <span>Sign In as Administrator</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setCurrentPage('home');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="w-full bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-300 hover:text-white font-bold text-xs py-3 rounded-xl transition cursor-pointer"
+                  id="admin-lock-return-home-btn"
+                >
+                  Return to Main Homepage
+                </button>
+              </div>
+            </div>
+          </div>
+        )
       ) : (
         <ServicePages initialTab={currentPage as any} onBackToHome={() => setCurrentPage('home')} />
       )}
@@ -1769,6 +1996,18 @@ export default function App() {
             onClose={handleCloseTour} 
             onSelectPage={setCurrentPage} 
             onFinishSetup={handleFinishSetupFromTour}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Interactive Authentication Dialog Wrapper */}
+      <AnimatePresence>
+        {authModalOpen && (
+          <AuthModal 
+            isOpen={authModalOpen}
+            onClose={() => setAuthModalOpen(false)}
+            initialMode={authModalMode}
+            onLoginSuccess={handleLoginSuccess}
           />
         )}
       </AnimatePresence>
